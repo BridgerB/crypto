@@ -15,7 +15,7 @@ const RPC_CONFIG = {
   password: "password",
 };
 
-const DATA_DIR = "data/addresses";
+const DATA_DIR = "/run/media/bridger/6TB/crypto/bitcoin/addresses";
 
 // RPC Functions
 function createRPCAuth() {
