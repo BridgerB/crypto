@@ -25,76 +25,38 @@ const BATCH_LIMITS = {
   inputs: Math.floor(EFFECTIVE_MAX_PARAMS / 8),
 };
 
-// Console styling utilities
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  dim: "\x1b[2m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-  gray: "\x1b[90m",
-};
-
-const symbols = {
-  success: "✓",
-  error: "✗",
-  warning: "⚠",
-  info: "ℹ",
-  processing: "⚡",
-  time: "⏱",
-  worker: "👷",
-};
-
 // Flag to track if we're shutting down
 let isShuttingDown = false;
 
-// Enhanced logging utility for workers
+// Simple logging utility for workers
 function workerLog(level, message, data = null) {
   if (isShuttingDown) return;
 
   const timestamp = new Date().toLocaleTimeString();
-  const workerPrefix =
-    `${colors.gray}[W${workerId}:${timestamp}]${colors.reset}`;
+  const workerPrefix = `[W${workerId}:${timestamp}]`;
 
   switch (level) {
     case "info":
-      console.log(
-        `${workerPrefix} ${colors.blue}${symbols.info}${colors.reset} ${message}`,
-      );
+      console.log(`${workerPrefix} INFO: ${message}`);
       break;
     case "success":
-      console.log(
-        `${workerPrefix} ${colors.green}${symbols.success}${colors.reset} ${message}`,
-      );
+      console.log(`${workerPrefix} SUCCESS: ${message}`);
       break;
     case "warning":
-      console.log(
-        `${workerPrefix} ${colors.yellow}${symbols.warning}${colors.reset} ${message}`,
-      );
+      console.log(`${workerPrefix} WARNING: ${message}`);
       break;
     case "error":
-      console.log(
-        `${workerPrefix} ${colors.red}${symbols.error}${colors.reset} ${message}`,
-      );
+      console.log(`${workerPrefix} ERROR: ${message}`);
       break;
     case "processing":
-      console.log(
-        `${workerPrefix} ${colors.cyan}${symbols.processing}${colors.reset} ${message}`,
-      );
+      console.log(`${workerPrefix} PROCESSING: ${message}`);
       break;
     default:
       console.log(`${workerPrefix} ${message}`);
   }
 
   if (data) {
-    console.log(
-      `${colors.gray}${JSON.stringify(data, null, 2)}${colors.reset}`,
-    );
+    console.log(JSON.stringify(data, null, 2));
   }
 }
 
@@ -236,22 +198,6 @@ class BlockProcessor {
   }
 
   /**
-   * Format processing time in a readable way
-   */
-  formatTime(ms) {
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    return `${(ms / 60000).toFixed(1)}m`;
-  }
-
-  /**
-   * Format numbers with commas
-   */
-  formatNumber(num) {
-    return num.toLocaleString();
-  }
-
-  /**
    * Process a block at the given height and store it in the database
    */
   async processBlock(blockHeight) {
@@ -260,7 +206,7 @@ class BlockProcessor {
     if (this.verbose) {
       workerLog(
         "processing",
-        `Starting block ${this.formatNumber(blockHeight)}...`,
+        `Starting block ${blockHeight.toLocaleString()}...`,
       );
     }
 
@@ -271,7 +217,7 @@ class BlockProcessor {
       if (this.verbose) {
         workerLog(
           "info",
-          `Retrieved hash for block ${this.formatNumber(blockHeight)}: ${
+          `Retrieved hash for block ${blockHeight.toLocaleString()}: ${
             blockHash.substring(0, 16)
           }...`,
         );
@@ -292,12 +238,8 @@ class BlockProcessor {
       if (this.verbose) {
         workerLog(
           "success",
-          `Block ${this.formatNumber(blockHeight)} completed in ${
-            this.formatTime(processingTime)
-          } ` +
-            `(${this.formatNumber(blockData.tx.length)} txs, ${
-              this.formatNumber(txResult.outputs)
-            } outputs, ${this.formatNumber(txResult.inputs)} inputs)`,
+          `Block ${blockHeight.toLocaleString()} completed in ${processingTime}ms ` +
+            `(${blockData.tx.length.toLocaleString()} txs, ${txResult.outputs.toLocaleString()} outputs, ${txResult.inputs.toLocaleString()} inputs)`,
         );
       }
 
@@ -314,8 +256,8 @@ class BlockProcessor {
       const processingTime = Date.now() - startTime;
       workerLog(
         "error",
-        `Block ${this.formatNumber(blockHeight)} failed after ${
-          this.formatTime(processingTime)
+        `Block ${blockHeight.toLocaleString()} failed after ${
+          processingTime + "ms"
         }: ${error.message}`,
       );
       return {
@@ -336,9 +278,7 @@ class BlockProcessor {
     if (this.verbose) {
       workerLog(
         "processing",
-        `Processing prefetched block ${this.formatNumber(blockHeight)} (${
-          this.formatNumber(blockData.tx.length)
-        } transactions)...`,
+        `Processing prefetched block ${blockHeight.toLocaleString()} (${blockData.tx.length.toLocaleString()} transactions)...`,
       );
     }
 
@@ -366,14 +306,10 @@ class BlockProcessor {
 
       workerLog(
         "success",
-        `Block ${this.formatNumber(blockHeight)} processed in ${
-          this.formatTime(processingTime)
+        `Block ${blockHeight.toLocaleString()} processed in ${
+          processingTime + "ms"
         } ` +
-          `${colors.gray}(${this.formatNumber(blockData.tx.length)} txs, ${
-            this.formatNumber(txResult.outputs)
-          } outputs, ${
-            this.formatNumber(txResult.inputs)
-          } inputs, ${this.stats.batchesExecuted} batches)${colors.reset}`,
+          `(${blockData.tx.length.toLocaleString()} txs, ${txResult.outputs.toLocaleString()} outputs, ${txResult.inputs.toLocaleString()} inputs, ${this.stats.batchesExecuted} batches)`,
       );
 
       return {
@@ -389,8 +325,8 @@ class BlockProcessor {
       const processingTime = Date.now() - startTime;
       workerLog(
         "error",
-        `Block ${this.formatNumber(blockHeight)} failed after ${
-          this.formatTime(processingTime)
+        `Block ${blockHeight.toLocaleString()} failed after ${
+          processingTime + "ms"
         }: ${error.message}`,
       );
       return {
@@ -420,9 +356,7 @@ class BlockProcessor {
     if (this.verbose) {
       workerLog(
         "info",
-        `Inserting block ${
-          this.formatNumber(blockData.height)
-        } into database...`,
+        `Inserting block ${blockData.height.toLocaleString()} into database...`,
       );
     }
 
@@ -481,7 +415,7 @@ class BlockProcessor {
       if (this.verbose) {
         workerLog(
           "success",
-          `Block ${this.formatNumber(blockData.height)} metadata inserted`,
+          `Block ${blockData.height.toLocaleString()} metadata inserted`,
         );
       }
     } catch (error) {
@@ -511,9 +445,7 @@ class BlockProcessor {
     if (this.verbose) {
       workerLog(
         "processing",
-        `Processing ${
-          this.formatNumber(blockData.tx.length)
-        } transactions for block ${this.formatNumber(blockData.height)}...`,
+        `Processing ${blockData.tx.length.toLocaleString()} transactions for block ${blockData.height.toLocaleString()}...`,
       );
     }
 
@@ -541,9 +473,11 @@ class BlockProcessor {
         if (this.verbose && i > 0 && i % 500 === 0) {
           workerLog(
             "info",
-            `Processing transaction ${this.formatNumber(i + 1)}/${
-              this.formatNumber(blockData.tx.length)
-            }: ${tx.txid.substring(0, 16)}...`,
+            `Processing transaction ${
+              (i + 1).toLocaleString()
+            }/${blockData.tx.length.toLocaleString()}: ${
+              tx.txid.substring(0, 16)
+            }...`,
           );
         }
 
@@ -571,9 +505,7 @@ class BlockProcessor {
         if (this.verbose) {
           workerLog(
             "info",
-            `Safe batch inserting ${
-              this.formatNumber(transactionBatch.length)
-            } transactions...`,
+            `Safe batch inserting ${transactionBatch.length.toLocaleString()} transactions...`,
           );
         }
         await safeBatchInsert(
@@ -593,9 +525,7 @@ class BlockProcessor {
         if (this.verbose) {
           workerLog(
             "info",
-            `Safe batch inserting ${
-              this.formatNumber(outputBatch.length)
-            } outputs...`,
+            `Safe batch inserting ${outputBatch.length.toLocaleString()} outputs...`,
           );
         }
         await safeBatchInsert(
@@ -613,9 +543,7 @@ class BlockProcessor {
         if (this.verbose) {
           workerLog(
             "info",
-            `Safe batch inserting ${
-              this.formatNumber(inputBatch.length)
-            } inputs...`,
+            `Safe batch inserting ${inputBatch.length.toLocaleString()} inputs...`,
           );
         }
         await safeBatchInsert(
@@ -634,9 +562,7 @@ class BlockProcessor {
       if (this.verbose) {
         workerLog(
           "success",
-          `Safe batch insert completed for block ${
-            this.formatNumber(blockData.height)
-          } (${totalBatches} total batches)`,
+          `Safe batch insert completed for block ${blockData.height.toLocaleString()} (${totalBatches} total batches)`,
         );
       }
 
@@ -804,7 +730,7 @@ class BlockProcessor {
     return {
       ...this.stats,
       avgBlockTime: this.stats.avgBlockTime.toFixed(2),
-      totalProcessingTime: this.formatTime(this.stats.totalProcessingTime),
+      totalProcessingTime: this.stats.totalProcessingTime + "ms",
     };
   }
 }

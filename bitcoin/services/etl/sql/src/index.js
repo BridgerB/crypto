@@ -19,49 +19,12 @@ const BASE_DIR = process.env.BTC_ETL_BASE_DIR || path.resolve(__dirname, "..");
 // Calculate absolute worker path
 const WORKER_PATH = path.resolve(BASE_DIR, "src", "worker.js");
 
-// Console styling utilities
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  dim: "\x1b[2m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-  gray: "\x1b[90m",
-  bgRed: "\x1b[41m",
-  bgGreen: "\x1b[42m",
-  bgYellow: "\x1b[43m",
-  bgBlue: "\x1b[44m",
-};
-
-const symbols = {
-  success: "✓",
-  error: "✗",
-  warning: "⚠",
-  info: "ℹ",
-  processing: "⚡",
-  time: "⏱",
-  blocks: "▓",
-  arrow: "→",
-  bullet: "•",
-  progress: "█",
-  progressEmpty: "░",
-};
-
 // Verify the worker path exists
 if (!fs.existsSync(WORKER_PATH)) {
-  console.error(
-    `${colors.red}${symbols.error} Worker file not found: ${WORKER_PATH}${colors.reset}`,
-  );
-  console.error(
-    `${colors.gray}Current directory: ${process.cwd()}${colors.reset}`,
-  );
-  console.error(`${colors.gray}__dirname: ${__dirname}${colors.reset}`);
-  console.error(`${colors.gray}BASE_DIR: ${BASE_DIR}${colors.reset}`);
+  console.error(`ERROR: Worker file not found: ${WORKER_PATH}`);
+  console.error(`Current directory: ${process.cwd()}`);
+  console.error(`__dirname: ${__dirname}`);
+  console.error(`BASE_DIR: ${BASE_DIR}`);
   process.exit(1);
 }
 
@@ -100,108 +63,39 @@ class BitcoinETL {
   }
 
   /**
-   * Enhanced logging utility
+   * Simple logging utility
    */
   log(level, message, data = null) {
     const timestamp = new Date().toLocaleTimeString();
-    const prefix = `${colors.gray}[${timestamp}]${colors.reset}`;
+    const prefix = `[${timestamp}]`;
 
     switch (level) {
       case "info":
-        console.log(
-          `${prefix} ${colors.blue}${symbols.info}${colors.reset} ${message}`,
-        );
+        console.log(`${prefix} INFO: ${message}`);
         break;
       case "success":
-        console.log(
-          `${prefix} ${colors.green}${symbols.success}${colors.reset} ${message}`,
-        );
+        console.log(`${prefix} SUCCESS: ${message}`);
         break;
       case "warning":
-        console.log(
-          `${prefix} ${colors.yellow}${symbols.warning}${colors.reset} ${message}`,
-        );
+        console.log(`${prefix} WARNING: ${message}`);
         break;
       case "error":
-        console.log(
-          `${prefix} ${colors.red}${symbols.error}${colors.reset} ${message}`,
-        );
+        console.log(`${prefix} ERROR: ${message}`);
         break;
       case "processing":
-        console.log(
-          `${prefix} ${colors.cyan}${symbols.processing}${colors.reset} ${message}`,
-        );
+        console.log(`${prefix} PROCESSING: ${message}`);
         break;
       default:
         console.log(`${prefix} ${message}`);
     }
 
     if (data && this.verbose) {
-      console.log(
-        `${colors.gray}${JSON.stringify(data, null, 2)}${colors.reset}`,
-      );
+      console.log(JSON.stringify(data, null, 2));
     }
   }
 
   /**
-   * Display a formatted header
-   */
-  displayHeader(title) {
-    const width = 80;
-    const padding = Math.max(0, Math.floor((width - title.length - 2) / 2));
-    const line = "═".repeat(width);
-    const titleLine = "═".repeat(padding) + ` ${title} ` + "═".repeat(padding);
-
-    console.log(`\n${colors.cyan}${colors.bright}${line}${colors.reset}`);
-    console.log(`${colors.cyan}${colors.bright}${titleLine}${colors.reset}`);
-    console.log(`${colors.cyan}${colors.bright}${line}${colors.reset}\n`);
-  }
-
-  /**
-   * Display a progress bar
-   */
-  getProgressBar(current, total, width = 40) {
-    const percentage = Math.min(100, Math.max(0, (current / total) * 100));
-    const filled = Math.floor((percentage / 100) * width);
-    const empty = width - filled;
-
-    const bar = colors.green +
-      symbols.progress.repeat(filled) +
-      colors.gray +
-      symbols.progressEmpty.repeat(empty) +
-      colors.reset;
-
-    return `[${bar}] ${percentage.toFixed(1)}%`;
-  }
-
-  /**
-   * Format time duration
-   */
-  formatDuration(milliseconds) {
-    if (milliseconds < 1000) return `${milliseconds}ms`;
-
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
-    if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-    return `${seconds}s`;
-  }
-
-  /**
-   * Format numbers with proper units
-   */
-  formatNumber(num) {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  }
-
-  /**
-   * Calculate and display detailed statistics
+   * Display simple progress statistics
    */
   displayDetailedStats() {
     const now = Date.now();
@@ -212,179 +106,28 @@ class BitcoinETL {
 
     // Calculate current processing rate
     const currentRate = (completedBlocks / elapsed) * 1000; // blocks per second
-    this.processingRates.push({
-      time: now,
-      rate: currentRate,
-      completed: completedBlocks,
-    });
-
-    // Keep only last 10 rate measurements for smoothing
-    if (this.processingRates.length > 10) {
-      this.processingRates.shift();
-    }
-
-    // Calculate average rate over recent measurements
-    const recentRates = this.processingRates.slice(-5);
-    const avgRate = recentRates.reduce((sum, r) => sum + r.rate, 0) /
-      recentRates.length;
-
-    // Calculate ETA
-    const remainingBlocks = this.totalBlocksToProcess - completedBlocks;
-    const etaMs = remainingBlocks > 0 ? (remainingBlocks / avgRate) * 1000 : 0;
-    const etaDate = new Date(now + etaMs);
 
     // Calculate progress percentage
     const progress = this.totalBlocksToProcess > 0
       ? (completedBlocks / this.totalBlocksToProcess) * 100
       : 0;
 
-    // Clear previous lines and display stats
-    process.stdout.write("\x1b[2J\x1b[H"); // Clear screen and move cursor to top
+    // Simple progress output
+    console.log(
+      `\nProgress: ${completedBlocks}/${this.totalBlocksToProcess} blocks (${
+        progress.toFixed(1)
+      }%)`,
+    );
+    console.log(
+      `Rate: ${
+        currentRate.toFixed(2)
+      } blocks/sec, Success: ${this.results.success}, Failed: ${this.results.failed}`,
+    );
+    console.log(`Active Workers: ${this.activeWorkers}/${this.maxWorkers}`);
 
-    this.displayHeader("BITCOIN ETL PROCESSING STATUS");
-
-    // Main progress section
-    console.log(`${colors.bright}${symbols.blocks} PROGRESS${colors.reset}`);
-    console.log(
-      `   ${this.getProgressBar(completedBlocks, this.totalBlocksToProcess)}`,
-    );
-    console.log(
-      `   ${colors.cyan}${completedBlocks.toLocaleString()}${colors.reset} / ${colors.cyan}${this.totalBlocksToProcess.toLocaleString()}${colors.reset} blocks processed`,
-    );
-    console.log();
-
-    // Performance metrics
-    console.log(
-      `${colors.bright}${symbols.processing} PERFORMANCE${colors.reset}`,
-    );
-    console.log(
-      `   Current Rate: ${colors.green}${
-        avgRate.toFixed(2)
-      } blocks/sec${colors.reset}`,
-    );
-    console.log(
-      `   Success Rate: ${colors.green}${this.results.success.toLocaleString()}${colors.reset} blocks`,
-    );
-    if (this.results.failed > 0) {
-      console.log(
-        `   Failed:       ${colors.red}${this.results.failed.toLocaleString()}${colors.reset} blocks`,
-      );
-    }
-    console.log(
-      `   Active Workers: ${colors.yellow}${this.activeWorkers}${colors.reset} / ${colors.yellow}${this.maxWorkers}${colors.reset}`,
-    );
-    console.log();
-
-    // Time information
-    console.log(
-      `${colors.bright}${symbols.time} TIME INFORMATION${colors.reset}`,
-    );
-    console.log(
-      `   Elapsed: ${colors.cyan}${
-        this.formatDuration(elapsed)
-      }${colors.reset}`,
-    );
-    if (etaMs > 0) {
-      console.log(
-        `   ETA: ${colors.cyan}${this.formatDuration(etaMs)}${colors.reset}`,
-      );
-      console.log(
-        `   Completion: ${colors.cyan}${etaDate.toLocaleString()}${colors.reset}`,
-      );
-    }
-    console.log();
-
-    // Worker performance (if verbose)
-    if (this.verbose && this.workerStats.size > 0) {
-      console.log(
-        `${colors.bright}${symbols.info} WORKER STATS${colors.reset}`,
-      );
-      for (const [workerId, stats] of this.workerStats) {
-        const avgTime = stats.totalTime / stats.blocksProcessed;
-        console.log(
-          `   Worker ${workerId}: ${stats.blocksProcessed} blocks, ${
-            avgTime.toFixed(0)
-          }ms avg`,
-        );
-      }
-      console.log();
-    }
-
-    // Memory and cache info
-    const memUsed = process.memoryUsage();
-    console.log(`${colors.bright}${symbols.info} SYSTEM INFO${colors.reset}`);
-    console.log(
-      `   Memory: ${colors.cyan}${
-        (memUsed.heapUsed / 1024 / 1024).toFixed(1)
-      }MB${colors.reset} used`,
-    );
-    console.log(
-      `   Cached Blocks: ${colors.cyan}${this.prefetchedBlocks.size}${colors.reset}`,
-    );
-    console.log(
-      `   Cache Hit Rate: ${colors.cyan}${
-        ((this.blockHashCache.size / Math.max(1, completedBlocks)) * 100)
-          .toFixed(1)
-      }%${colors.reset}`,
-    );
-    console.log();
-
-    // Recent errors (if any)
     if (this.results.errors.length > 0) {
-      console.log(
-        `${colors.bright}${colors.red}${symbols.warning} RECENT ERRORS${colors.reset}`,
-      );
-      const recentErrors = this.results.errors.slice(-3);
-      recentErrors.forEach((error, i) => {
-        console.log(`   ${i + 1}. ${colors.red}${error}${colors.reset}`);
-      });
-      if (this.results.errors.length > 3) {
-        console.log(
-          `   ${colors.gray}... and ${
-            this.results.errors.length - 3
-          } more${colors.reset}`,
-        );
-      }
-      console.log();
+      console.log(`Recent errors: ${this.results.errors.length}`);
     }
-
-    // Display current processing range
-    if (
-      this.blocksToProcess.length > 0 &&
-      this.currentIndex < this.blocksToProcess.length
-    ) {
-      const currentBlock = this.blocksToProcess[this.currentIndex - 1];
-      const nextBlocks = this.blocksToProcess.slice(
-        this.currentIndex,
-        this.currentIndex + 5,
-      );
-
-      console.log(
-        `${colors.bright}${symbols.arrow} CURRENT PROCESSING${colors.reset}`,
-      );
-      if (currentBlock) {
-        console.log(
-          `   Current: ${colors.yellow}Block ${currentBlock.toLocaleString()}${colors.reset}`,
-        );
-      }
-      if (nextBlocks.length > 0) {
-        console.log(
-          `   Next: ${colors.gray}${
-            nextBlocks.map((b) => b.toLocaleString()).join(", ")
-          }${colors.reset}`,
-        );
-      }
-      console.log();
-    }
-
-    console.log(
-      `${colors.gray}Last updated: ${
-        new Date().toLocaleTimeString()
-      } (updates every ${this.progressUpdateInterval / 1000}s)${colors.reset}`,
-    );
-    console.log(
-      `${colors.gray}Press Ctrl+C to gracefully stop processing${colors.reset}`,
-    );
   }
 
   /**
@@ -455,20 +198,10 @@ class BitcoinETL {
     const needsProcessing = this.blocksToProcess.length;
 
     console.log();
-    this.displayHeader("PROCESSING SUMMARY");
-
-    console.log(
-      `${colors.bright}${symbols.blocks} BLOCK ANALYSIS${colors.reset}`,
-    );
-    console.log(
-      `   Total requested: ${colors.cyan}${totalRequested.toLocaleString()}${colors.reset} blocks`,
-    );
-    console.log(
-      `   Already exist: ${colors.green}${alreadyExists.toLocaleString()}${colors.reset} blocks`,
-    );
-    console.log(
-      `   Need processing: ${colors.yellow}${needsProcessing.toLocaleString()}${colors.reset} blocks`,
-    );
+    console.log("=== PROCESSING SUMMARY ===");
+    console.log(`Total requested: ${totalRequested.toLocaleString()} blocks`);
+    console.log(`Already exist: ${alreadyExists.toLocaleString()} blocks`);
+    console.log(`Need processing: ${needsProcessing.toLocaleString()} blocks`);
     console.log();
 
     if (needsProcessing === 0) {
@@ -490,18 +223,12 @@ class BitcoinETL {
     const avgTimePerBlock = this.estimateProcessingTime(startHeight, endHeight);
     if (avgTimePerBlock > 0) {
       const estimatedMs = needsProcessing * avgTimePerBlock;
+      const estimatedHours = (estimatedMs / (1000 * 60 * 60)).toFixed(1);
+      console.log(`Estimated duration: ${estimatedHours} hours`);
       console.log(
-        `${colors.bright}${symbols.time} TIME ESTIMATE${colors.reset}`,
-      );
-      console.log(
-        `   Estimated duration: ${colors.cyan}${
-          this.formatDuration(estimatedMs)
-        }${colors.reset}`,
-      );
-      console.log(
-        `   Est. completion: ${colors.cyan}${
+        `Est. completion: ${
           new Date(Date.now() + estimatedMs).toLocaleString()
-        }${colors.reset}`,
+        }`,
       );
       console.log();
     }
@@ -899,167 +626,30 @@ class BitcoinETL {
     const processedBlocks = this.results.success + this.results.failed;
     const blocksPerSecond = (processedBlocks / totalTime).toFixed(2);
 
-    console.log();
-    this.displayHeader("FINAL PROCESSING SUMMARY");
-
+    console.log("\n=== FINAL SUMMARY ===");
     console.log(
-      `${colors.bright}${symbols.success} COMPLETION STATISTICS${colors.reset}`,
+      `Total blocks requested: ${
+        this.totalBlocksToProcess + this.existingBlocks.size
+      }`,
+    );
+    console.log(`Already existed: ${this.existingBlocks.size}`);
+    console.log(
+      `Processed: ${processedBlocks} in ${totalTime}s (${blocksPerSecond} blocks/sec)`,
     );
     console.log(
-      `   Total blocks requested: ${colors.cyan}${
-        (this.totalBlocksToProcess + this.existingBlocks.size).toLocaleString()
-      }${colors.reset}`,
+      `Success: ${this.results.success}, Failed: ${this.results.failed}`,
     );
-    console.log(
-      `   Blocks already existed: ${colors.green}${this.existingBlocks.size.toLocaleString()}${colors.reset}`,
-    );
-    console.log(
-      `   Blocks processed: ${colors.cyan}${processedBlocks.toLocaleString()}${colors.reset} in ${colors.cyan}${
-        this.formatDuration(parseFloat(totalTime) * 1000)
-      }${colors.reset}`,
-    );
-    console.log(
-      `   Success: ${colors.green}${this.results.success.toLocaleString()}${colors.reset} blocks`,
-    );
-    console.log(
-      `   Failed: ${colors.red}${this.results.failed.toLocaleString()}${colors.reset} blocks`,
-    );
-    console.log(
-      `   Processing speed: ${colors.yellow}${blocksPerSecond} blocks/sec${colors.reset}`,
-    );
-    console.log();
-
-    // Performance breakdown
-    console.log(
-      `${colors.bright}${symbols.processing} PERFORMANCE BREAKDOWN${colors.reset}`,
-    );
-
-    if (this.recentBlockTimes.length > 0) {
-      const avgBlockTime = this.recentBlockTimes.reduce((sum, bt) =>
-        sum + bt.duration, 0) /
-        this.recentBlockTimes.length;
-      console.log(
-        `   Average block time: ${colors.cyan}${
-          avgBlockTime.toFixed(0)
-        }ms${colors.reset}`,
-      );
-    }
-
-    // Worker performance summary
-    console.log(`   Worker utilization:`);
-    for (const [workerId, stats] of this.workerStats) {
-      const avgTime = stats.totalTime > 0
-        ? stats.totalTime / stats.blocksProcessed
-        : 0;
-      const successRate = stats.blocksProcessed > 0
-        ? ((stats.blocksProcessed - stats.errors) / stats.blocksProcessed) *
-          100
-        : 0;
-      console.log(
-        `     Worker ${workerId}: ${colors.cyan}${stats.blocksProcessed}${colors.reset} blocks, ${colors.yellow}${
-          avgTime.toFixed(0)
-        }ms${colors.reset} avg, ${colors.green}${
-          successRate.toFixed(1)
-        }%${colors.reset} success`,
-      );
-    }
-    console.log();
-
-    const seconds = parseFloat(totalTime);
-    if (seconds > 60) {
-      const minutes = seconds / 60;
-      if (minutes > 60) {
-        const hours = minutes / 60;
-        if (hours > 24) {
-          const days = hours / 24;
-          console.log(
-            `${colors.bright}${symbols.time} TOTAL TIME${colors.reset}`,
-          );
-          console.log(
-            `   ${colors.cyan}${days.toFixed(2)} days${colors.reset} (${
-              hours.toFixed(2)
-            } hours)`,
-          );
-        } else {
-          console.log(
-            `${colors.bright}${symbols.time} TOTAL TIME${colors.reset}`,
-          );
-          console.log(
-            `   ${colors.cyan}${hours.toFixed(2)} hours${colors.reset} (${
-              minutes.toFixed(2)
-            } minutes)`,
-          );
-        }
-      } else {
-        console.log(
-          `${colors.bright}${symbols.time} TOTAL TIME${colors.reset}`,
-        );
-        console.log(
-          `   ${colors.cyan}${minutes.toFixed(2)} minutes${colors.reset} (${
-            seconds.toFixed(2)
-          } seconds)`,
-        );
-      }
-      console.log();
-    }
 
     if (this.results.errors.length > 0) {
-      console.log(
-        `${colors.bright}${colors.red}${symbols.warning} ERROR SUMMARY${colors.reset}`,
-      );
-      console.log(
-        `   Total errors: ${colors.red}${this.results.errors.length}${colors.reset}`,
-      );
-
-      // Group similar errors
-      const errorGroups = {};
-      this.results.errors.forEach((error) => {
-        const key = error.substring(0, 50); // Group by first 50 chars
-        errorGroups[key] = (errorGroups[key] || 0) + 1;
-      });
-
-      console.log(`   Error types:`);
-      Object.entries(errorGroups).forEach(([errorType, count]) => {
-        console.log(
-          `     ${colors.red}${count}x${colors.reset} ${errorType}${
-            errorType.length >= 50 ? "..." : ""
-          }`,
-        );
-      });
-      console.log();
+      console.log(`Total errors: ${this.results.errors.length}`);
     }
-
-    // Database statistics
-    console.log(
-      `${colors.bright}${symbols.info} DATABASE IMPACT${colors.reset}`,
-    );
-    console.log(`   Estimated rows inserted:`);
-    console.log(
-      `     Blocks: ${colors.cyan}${this.results.success.toLocaleString()}${colors.reset}`,
-    );
-    console.log(
-      `     Transactions: ${colors.cyan}~${
-        (this.results.success * 2000).toLocaleString()
-      }${colors.reset} (estimated)`,
-    );
-    console.log(
-      `     Outputs: ${colors.cyan}~${
-        (this.results.success * 4000).toLocaleString()
-      }${colors.reset} (estimated)`,
-    );
-    console.log(
-      `     Inputs: ${colors.cyan}~${
-        (this.results.success * 3500).toLocaleString()
-      }${colors.reset} (estimated)`,
-    );
-    console.log();
 
     this.log("success", "ETL processing completed successfully!");
 
     if (this.results.failed > 0) {
       this.log(
         "warning",
-        `Consider re-running failed blocks. Use: node src/index.js <start> <end> to retry specific ranges.`,
+        "Consider re-running failed blocks. Use: node src/index.js <start> <end> to retry specific ranges.",
       );
     }
   }
@@ -1086,7 +676,7 @@ class BitcoinETL {
 
   async processBlockRange(startHeight, endHeight) {
     console.log();
-    this.displayHeader("BITCOIN ETL PROCESSOR");
+    console.log("=== BITCOIN ETL PROCESSOR ===");
 
     this.log(
       "info",
@@ -1157,20 +747,16 @@ class BitcoinETL {
   }
 }
 
-// Handle process signals with enhanced messaging
+// Handle process signals
 process.on("SIGINT", () => {
-  console.log(
-    `\n${colors.yellow}${symbols.warning} Received SIGINT signal. Shutting down gracefully...${colors.reset}`,
-  );
-  console.log(
-    `${colors.gray}Please wait for workers to finish current blocks...${colors.reset}`,
-  );
+  console.log("\nWARNING: Received SIGINT signal. Shutting down gracefully...");
+  console.log("Please wait for workers to finish current blocks...");
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
   console.log(
-    `\n${colors.yellow}${symbols.warning} Received SIGTERM signal. Shutting down gracefully...${colors.reset}`,
+    "\nWARNING: Received SIGTERM signal. Shutting down gracefully...",
   );
   process.exit(0);
 });
@@ -1209,11 +795,9 @@ async function main() {
   }
 
   if (startHeight === undefined || isNaN(startHeight)) {
-    console.error(
-      `${colors.red}${symbols.error} Please provide a valid start block height${colors.reset}`,
-    );
+    console.error("ERROR: Please provide a valid start block height");
     console.log(
-      `${colors.cyan}Usage: node src/index.js <start_height> [end_height] [--verbose|-v] [--workers|-w <num_workers>] [--batch-size|-b <batch_size>]${colors.reset}`,
+      "Usage: node src/index.js <start_height> [end_height] [--verbose|-v] [--workers|-w <num_workers>] [--batch-size|-b <batch_size>]",
     );
     process.exit(1);
   }
@@ -1224,7 +808,7 @@ async function main() {
 
   if (endHeight < startHeight) {
     console.error(
-      `${colors.red}${symbols.error} End height must be greater than or equal to start height${colors.reset}`,
+      "ERROR: End height must be greater than or equal to start height",
     );
     process.exit(1);
   }
@@ -1237,30 +821,28 @@ async function main() {
     });
 
     console.log();
-    console.log(`${colors.bright}${symbols.info} CONFIGURATION${colors.reset}`);
-    console.log(`   Workers: ${colors.cyan}${numWorkers}${colors.reset}`);
-    console.log(`   Batch size: ${colors.cyan}${batchSize}${colors.reset}`);
-    console.log(`   Verbose: ${colors.cyan}${verbose}${colors.reset}`);
+    console.log("=== CONFIGURATION ===");
+    console.log(`Workers: ${numWorkers}`);
+    console.log(`Batch size: ${batchSize}`);
+    console.log(`Verbose: ${verbose}`);
     console.log(
-      `   Block range: ${colors.cyan}${startHeight.toLocaleString()} to ${endHeight.toLocaleString()}${colors.reset}`,
+      `Block range: ${startHeight.toLocaleString()} to ${endHeight.toLocaleString()}`,
     );
     console.log();
 
     const isValid = await etl.validateBlockRange(startHeight, endHeight);
     if (!isValid) {
       console.error(
-        `${colors.red}${symbols.error} Invalid block range. Please check the block heights.${colors.reset}`,
+        "ERROR: Invalid block range. Please check the block heights.",
       );
       process.exit(1);
     }
 
     await etl.processBlockRange(startHeight, endHeight);
   } catch (error) {
-    console.error(
-      `${colors.red}${symbols.error} Fatal error: ${error.message}${colors.reset}`,
-    );
+    console.error(`ERROR: Fatal error: ${error.message}`);
     if (verbose) {
-      console.error(`${colors.gray}${error.stack}${colors.reset}`);
+      console.error(error.stack);
     }
     process.exit(1);
   }
