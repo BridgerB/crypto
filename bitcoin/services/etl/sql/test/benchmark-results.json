@@ -1,0 +1,128 @@
+[
+  {
+    "range": {
+      "start": 0,
+      "end": 9,
+      "label": "0-100k (genesis)"
+    },
+    "startBlock": 0,
+    "endBlock": 9,
+    "blockCount": 10,
+    "totalTimeMs": 846,
+    "msPerBlock": 28.00336040324839,
+    "blocksPerSecond": 35.71,
+    "timestamp": "2025-05-20T05:51:17.440Z"
+  },
+  {
+    "range": {
+      "start": 100000,
+      "end": 100009,
+      "label": "100k (2011)"
+    },
+    "startBlock": 100000,
+    "endBlock": 100009,
+    "blockCount": 10,
+    "totalTimeMs": 925,
+    "msPerBlock": 35.99712023038157,
+    "blocksPerSecond": 27.78,
+    "timestamp": "2025-05-20T05:51:18.366Z"
+  },
+  {
+    "range": {
+      "start": 200000,
+      "end": 200009,
+      "label": "200k (2012)"
+    },
+    "startBlock": 200000,
+    "endBlock": 200009,
+    "blockCount": 10,
+    "totalTimeMs": 3177,
+    "msPerBlock": 261.7801047120419,
+    "blocksPerSecond": 3.82,
+    "timestamp": "2025-05-20T05:51:21.544Z"
+  },
+  {
+    "range": {
+      "start": 300000,
+      "end": 300009,
+      "label": "300k (2014)"
+    },
+    "startBlock": 300000,
+    "endBlock": 300009,
+    "blockCount": 10,
+    "totalTimeMs": 3875,
+    "msPerBlock": 328.9473684210526,
+    "blocksPerSecond": 3.04,
+    "timestamp": "2025-05-20T05:51:25.419Z"
+  },
+  {
+    "range": {
+      "start": 400000,
+      "end": 400009,
+      "label": "400k (2016)"
+    },
+    "startBlock": 400000,
+    "endBlock": 400009,
+    "blockCount": 10,
+    "totalTimeMs": 16593,
+    "msPerBlock": 1612.9032258064517,
+    "blocksPerSecond": 0.62,
+    "timestamp": "2025-05-20T05:51:42.012Z"
+  },
+  {
+    "range": {
+      "start": 500000,
+      "end": 500009,
+      "label": "500k (2017)"
+    },
+    "startBlock": 500000,
+    "endBlock": 500009,
+    "blockCount": 10,
+    "totalTimeMs": 17272,
+    "msPerBlock": 1666.6666666666667,
+    "blocksPerSecond": 0.6,
+    "timestamp": "2025-05-20T05:51:59.285Z"
+  },
+  {
+    "range": {
+      "start": 600000,
+      "end": 600009,
+      "label": "600k (2019)"
+    },
+    "startBlock": 600000,
+    "endBlock": 600009,
+    "blockCount": 10,
+    "totalTimeMs": 20426,
+    "msPerBlock": 2000,
+    "blocksPerSecond": 0.5,
+    "timestamp": "2025-05-20T05:52:19.712Z"
+  },
+  {
+    "range": {
+      "start": 700000,
+      "end": 700009,
+      "label": "700k (2021)"
+    },
+    "startBlock": 700000,
+    "endBlock": 700009,
+    "blockCount": 10,
+    "totalTimeMs": 18089,
+    "msPerBlock": 1754.3859649122808,
+    "blocksPerSecond": 0.57,
+    "timestamp": "2025-05-20T05:52:37.801Z"
+  },
+  {
+    "range": {
+      "start": 800000,
+      "end": 800009,
+      "label": "800k (2023)"
+    },
+    "startBlock": 800000,
+    "endBlock": 800009,
+    "blockCount": 10,
+    "totalTimeMs": 26463,
+    "msPerBlock": 2564.102564102564,
+    "blocksPerSecond": 0.39,
+    "timestamp": "2025-05-20T05:53:04.264Z"
+  }
+]

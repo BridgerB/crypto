@@ -1,0 +1,219 @@
+-- materialized_views.sql
+-- This file contains materialized views for common Bitcoin analysis
+-- Create materialized view for the UTXO set (current unspent outputs)
+-- This is a critical performance optimization for Bitcoin analysis
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_utxo_set AS
+SELECT
+    o.id,
+    o.tx_hash,
+    o.position,
+    o.value,
+    o.script_pubkey,
+    o.address,
+    o.address_type,
+    o.script_type,
+    t.block_height,
+    b.timestamp AS created_at
+FROM
+    output o
+    JOIN TRANSACTION t ON o.tx_hash = t.tx_hash
+    JOIN block b ON t.block_height = b.block_height
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            input i
+        WHERE
+            i.prev_tx_hash = o.tx_hash
+            AND i.prev_position = o.position
+)
+    WITH DATA;
+
+-- Create indexes on the UTXO set materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_utxo_set_id ON mv_utxo_set (id);
+
+CREATE INDEX IF NOT EXISTS idx_utxo_set_tx_position ON mv_utxo_set (tx_hash, position);
+
+CREATE INDEX IF NOT EXISTS idx_utxo_set_address ON mv_utxo_set (address);
+
+CREATE INDEX IF NOT EXISTS idx_utxo_set_value ON mv_utxo_set (value DESC);
+
+CREATE INDEX IF NOT EXISTS idx_utxo_set_block_height ON mv_utxo_set (block_height);
+
+-- Function to refresh the UTXO set materialized view
+CREATE OR REPLACE FUNCTION refresh_utxo_set ()
+    RETURNS void
+    AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW mv_utxo_set;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Create materialized view for address balances
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_address_balances AS
+SELECT
+    address,
+    COUNT(*) AS utxo_count,
+    SUM(value) AS balance_satoshis,
+    MIN(block_height) AS first_seen_block,
+    MAX(block_height) AS last_seen_block
+FROM
+    mv_utxo_set
+WHERE
+    address IS NOT NULL
+GROUP BY
+    address WITH DATA;
+
+-- Create indexes on the address balances materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_address_balances_address ON mv_address_balances (address);
+
+CREATE INDEX IF NOT EXISTS idx_address_balances_balance ON mv_address_balances (balance_satoshis DESC);
+
+-- Create materialized view for daily blockchain statistics
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_daily_stats AS
+SELECT
+    DATE_TRUNC('day', b.timestamp) AS date,
+    COUNT(DISTINCT b.block_height) AS blocks_count,
+    COUNT(DISTINCT t.tx_hash) AS transactions_count,
+    SUM(t.fee) AS total_fees_satoshis,
+    AVG(t.fee) FILTER (WHERE NOT t.is_coinbase) AS avg_fee_satoshis,
+    SUM(b.reward) AS total_reward_satoshis,
+    SUM(b.size) AS total_size_bytes,
+    SUM(CAST(b.weight AS bigint)) AS total_weight,
+    COUNT(DISTINCT o.address) FILTER (WHERE o.address IS NOT NULL) AS active_addresses,
+    SUM(o.value) AS total_output_value_satoshis,
+    MAX(b.block_height) AS max_block_height
+FROM
+    block b
+    LEFT JOIN TRANSACTION t ON b.block_height = t.block_height
+    LEFT JOIN output o ON t.tx_hash = o.tx_hash
+GROUP BY
+    DATE_TRUNC('day', b.timestamp
+)
+    WITH DATA;
+
+-- Create indexes on the daily stats materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stats_date ON mv_daily_stats (date);
+
+CREATE INDEX IF NOT EXISTS idx_daily_stats_tx_count ON mv_daily_stats (transactions_count DESC);
+
+-- Create materialized view for transaction types distribution by block range
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_tx_type_distribution AS
+SELECT
+    FLOOR(b.block_height / 10000) * 10000 AS block_range_start,
+    (FLOOR(b.block_height / 10000) * 10000) + 9999 AS block_range_end,
+    COUNT(*) AS total_transactions,
+    SUM(
+        CASE WHEN t.is_coinbase THEN
+            1
+        ELSE
+            0
+        END) AS coinbase_tx_count,
+    SUM(
+        CASE WHEN t.type = 'SEGWIT' THEN
+            1
+        ELSE
+            0
+        END) AS segwit_tx_count,
+    SUM(
+        CASE WHEN t.type = 'LEGACY'
+            AND NOT t.is_coinbase THEN
+            1
+        ELSE
+            0
+        END) AS legacy_tx_count,
+    AVG(t.fee) FILTER (WHERE NOT t.is_coinbase) AS avg_fee_satoshis,
+    MAX(t.fee) FILTER (WHERE NOT t.is_coinbase) AS max_fee_satoshis,
+    MIN(b.timestamp) AS start_time,
+    MAX(b.timestamp) AS end_time,
+    MAX(b.timestamp) - MIN(b.timestamp) AS time_span
+FROM
+    TRANSACTION t
+    JOIN block b ON t.block_height = b.block_height
+GROUP BY
+    FLOOR(b.block_height / 10000
+)
+    WITH DATA;
+
+-- Create indexes on the transaction type distribution materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_type_dist_range ON mv_tx_type_distribution (block_range_start);
+
+-- Create materialized view for address clustering (identify address reuse)
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_address_clusters AS
+WITH input_addresses AS (
+    SELECT DISTINCT
+        i.tx_hash,
+        o.address AS input_address
+    FROM
+        input i
+        JOIN output o ON i.prev_tx_hash = o.tx_hash
+            AND i.prev_position = o.position
+    WHERE
+        o.address IS NOT NULL
+),
+tx_address_groups AS (
+    SELECT
+        tx_hash,
+        ARRAY_AGG(DISTINCT input_address ORDER BY input_address) AS addresses
+FROM
+    input_addresses
+GROUP BY
+    tx_hash
+HAVING
+    COUNT(DISTINCT input_address) > 1
+)
+SELECT
+    ROW_NUMBER() OVER () AS cluster_id,
+        ARRAY_AGG(DISTINCT a) AS clustered_addresses,
+    COUNT(DISTINCT a) AS address_count
+FROM ( SELECT DISTINCT
+        UNNEST(addresses) AS a
+    FROM
+        tx_address_groups) AS unique_addresses
+GROUP BY
+    TRUE
+HAVING
+    COUNT(DISTINCT a) > 1 WITH DATA;
+
+-- Create index on the address clusters materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_address_clusters_id ON mv_address_clusters (cluster_id);
+
+-- Create a function to refresh all materialized views
+CREATE OR REPLACE FUNCTION refresh_all_mvs ()
+    RETURNS void
+    AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW mv_utxo_set;
+    REFRESH MATERIALIZED VIEW mv_address_balances;
+    REFRESH MATERIALIZED VIEW mv_daily_stats;
+    REFRESH MATERIALIZED VIEW mv_tx_type_distribution;
+    REFRESH MATERIALIZED VIEW mv_address_clusters;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Example command to refresh all views (run periodically after ETL processing)
+-- SELECT refresh_all_mvs();
+-- Refreshing materialized views consumes resources, so it's recommended to run them
+-- one at a time for large datasets or during off-peak hours
+-- COMMENT OUT this section if you want to run these commands separately
+DO $$
+BEGIN
+    RAISE NOTICE 'Starting materialized view refresh...';
+    -- Refresh views in order of dependency
+    RAISE NOTICE 'Refreshing UTXO set...';
+    REFRESH MATERIALIZED VIEW mv_utxo_set;
+    RAISE NOTICE 'Refreshing address balances...';
+    REFRESH MATERIALIZED VIEW mv_address_balances;
+    RAISE NOTICE 'Refreshing daily stats...';
+    REFRESH MATERIALIZED VIEW mv_daily_stats;
+    RAISE NOTICE 'Refreshing transaction type distribution...';
+    REFRESH MATERIALIZED VIEW mv_tx_type_distribution;
+    RAISE NOTICE 'Refreshing address clusters (this may take a while)...';
+    REFRESH MATERIALIZED VIEW mv_address_clusters;
+    RAISE NOTICE 'All materialized views refreshed successfully!';
+END
+$$;
+

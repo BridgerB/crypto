@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres
+    # restart: always
+    network_mode: host
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: local
+    volumes:
+      - /run/media/bridger/6TB/postgresql/btc-etl:/var/lib/postgresql/data

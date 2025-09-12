@@ -1,0 +1,239 @@
+-- common_queries.sql
+-- This file contains common SQL queries for the Bitcoin ETL database
+-- Get basic blockchain statistics
+SELECT
+    COUNT(*) AS total_blocks,
+    MIN(block_height) AS min_height,
+    MAX(block_height) AS max_height,
+    MAX(timestamp) AS latest_block_time,
+    (MAX(block_height) - MIN(block_height) + 1) AS expected_blocks,
+    COUNT(*) - (MAX(block_height) - MIN(block_height) + 1) AS missing_blocks
+FROM
+    block;
+
+-- Get transaction statistics
+SELECT
+    COUNT(*) AS total_transactions,
+    SUM(
+        CASE WHEN is_coinbase THEN
+            1
+        ELSE
+            0
+        END) AS coinbase_txs,
+    SUM(
+        CASE WHEN is_coinbase THEN
+            0
+        ELSE
+            1
+        END) AS regular_txs,
+    SUM(
+        CASE WHEN type = 'SEGWIT' THEN
+            1
+        ELSE
+            0
+        END) AS segwit_txs,
+    SUM(
+        CASE WHEN type = 'LEGACY' THEN
+            1
+        ELSE
+            0
+        END) AS legacy_txs
+FROM
+    TRANSACTION;
+
+-- Get input/output statistics
+SELECT
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            input) AS total_inputs,
+    (
+        SELECT
+            COUNT(*)
+        FROM
+            output) AS total_outputs,
+    (
+        SELECT
+            COUNT(DISTINCT prev_tx_hash)
+        FROM
+            input
+        WHERE
+            prev_tx_hash IS NOT NULL) AS unique_spent_txs,
+    (
+        SELECT
+            COUNT(DISTINCT tx_hash)
+        FROM
+            output) AS unique_output_txs,
+    (
+        SELECT
+            COUNT(DISTINCT address)
+        FROM
+            output
+        WHERE
+            address IS NOT NULL) AS unique_addresses;
+
+-- Get block distribution by year
+SELECT
+    DATE_PART('year', timestamp) AS year,
+    COUNT(*) AS blocks,
+    MIN(block_height) AS first_block,
+    MAX(block_height) AS last_block,
+    SUM(CAST(reward AS bigint)) / 100000000.0 AS total_block_rewards_btc,
+    SUM(CAST(fees AS bigint)) / 100000000.0 AS total_fees_btc
+FROM
+    block
+GROUP BY
+    DATE_PART('year', timestamp)
+ORDER BY
+    year;
+
+-- Get transactions per block statistics
+SELECT
+    AVG(tx_count) AS avg_txs_per_block,
+    MIN(tx_count) AS min_txs_per_block,
+    MAX(tx_count) AS max_txs_per_block,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tx_count) AS median_txs_per_block,
+    PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY tx_count) AS p90_txs_per_block
+FROM (
+    SELECT
+        b.block_height,
+        COUNT(t.id) AS tx_count
+    FROM
+        block b
+    LEFT JOIN TRANSACTION t ON t.block_height = b.block_height
+GROUP BY
+    b.block_height) AS block_tx_counts;
+
+-- Get the top 20 richest addresses
+SELECT
+    address,
+    SUM(CAST(value AS bigint)) / 100000000.0 AS balance_btc,
+    COUNT(*) AS utxo_count
+FROM
+    output o
+WHERE
+    address IS NOT NULL
+    -- Only include UTXOs that haven't been spent
+    AND NOT EXISTS (
+        SELECT
+            1
+        FROM
+            input i
+        WHERE
+            i.prev_tx_hash = o.tx_hash
+            AND i.prev_position = o.position)
+GROUP BY
+    address
+ORDER BY
+    balance_btc DESC
+LIMIT 20;
+
+-- Get transaction types distribution over time (by 100k blocks)
+SELECT
+    FLOOR(b.block_height / 100000) * 100000 AS block_range,
+    COUNT(*) AS total_txs,
+    SUM(
+        CASE WHEN t.is_coinbase THEN
+            1
+        ELSE
+            0
+        END) AS coinbase_txs,
+    SUM(
+        CASE WHEN t.type = 'SEGWIT' THEN
+            1
+        ELSE
+            0
+        END) AS segwit_txs,
+    SUM(
+        CASE WHEN t.type = 'LEGACY'
+            AND NOT t.is_coinbase THEN
+            1
+        ELSE
+            0
+        END) AS legacy_txs,
+    SUM(CAST(t.fee AS bigint)) / 100000000.0 AS total_fees_btc,
+    AVG(CAST(t.fee AS double precision)) / 100000000.0 AS avg_fee_btc
+FROM
+    TRANSACTION t
+    JOIN block b ON t.block_height = b.block_height
+GROUP BY
+    FLOOR(b.block_height / 100000) * 100000
+ORDER BY
+    block_range;
+
+-- Get most common script types
+SELECT
+    script_type,
+    COUNT(*) AS count,
+    ROUND(100.0 * COUNT(*) / (
+            SELECT
+                COUNT(*)
+            FROM output), 2) AS percentage
+FROM
+    output
+GROUP BY
+    script_type
+ORDER BY
+    count DESC;
+
+-- Get total BTC supply calculation
+SELECT
+    SUM(CAST(value AS bigint)) / 100000000.0 AS total_btc_supply
+FROM
+    output o
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            input i
+        WHERE
+            i.prev_tx_hash = o.tx_hash
+            AND i.prev_position = o.position);
+
+-- Get average transaction fee by month
+SELECT
+    DATE_TRUNC('month', b.timestamp) AS month,
+    AVG(CAST(t.fee AS double precision)) / 100000000.0 AS avg_fee_btc,
+    SUM(CAST(t.fee AS bigint)) / 100000000.0 AS total_fees_btc,
+    COUNT(*) AS transaction_count
+FROM
+    TRANSACTION t
+    JOIN block b ON t.block_height = b.block_height
+WHERE
+    NOT t.is_coinbase
+GROUP BY
+    DATE_TRUNC('month', b.timestamp)
+ORDER BY
+    month;
+
+-- Get block time statistics (time between blocks)
+WITH block_times AS (
+    SELECT
+        block_height,
+        timestamp,
+        LAG(timestamp) OVER (ORDER BY block_height) AS prev_timestamp
+    FROM
+        block
+)
+SELECT
+    AVG(EXTRACT(EPOCH FROM (timestamp - prev_timestamp))) AS avg_block_time_seconds,
+    MIN(EXTRACT(EPOCH FROM (timestamp - prev_timestamp))) AS min_block_time_seconds,
+    MAX(EXTRACT(EPOCH FROM (timestamp - prev_timestamp))) AS max_block_time_seconds,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (timestamp - prev_timestamp))) AS median_block_time_seconds
+FROM
+    block_times
+WHERE
+    prev_timestamp IS NOT NULL;
+
+-- Get transaction size statistics
+SELECT
+    AVG(CAST(size AS integer)) AS avg_tx_size_bytes,
+    MIN(CAST(size AS integer)) AS min_tx_size_bytes,
+    MAX(CAST(size AS integer)) AS max_tx_size_bytes,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST(size AS integer)) AS median_tx_size_bytes,
+    PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY CAST(size AS integer)) AS p90_tx_size_bytes
+FROM
+    TRANSACTION;
+
