@@ -219,51 +219,10 @@ class BitcoinETL {
       );
     }
 
-    // Estimate processing time
-    const avgTimePerBlock = this.estimateProcessingTime(startHeight, endHeight);
-    if (avgTimePerBlock > 0) {
-      const estimatedMs = needsProcessing * avgTimePerBlock;
-      const estimatedHours = (estimatedMs / (1000 * 60 * 60)).toFixed(1);
-      console.log(`Estimated duration: ${estimatedHours} hours`);
-      console.log(
-        `Est. completion: ${
-          new Date(Date.now() + estimatedMs).toLocaleString()
-        }`,
-      );
-      console.log();
-    }
 
     return true;
   }
 
-  /**
-   * Estimate processing time based on block height
-   */
-  estimateProcessingTime(startHeight, endHeight) {
-    // Rough estimates based on typical block complexity
-    const ranges = [
-      { min: 0, max: 100000, msPerBlock: 50 },
-      { min: 100001, max: 200000, msPerBlock: 200 },
-      { min: 200001, max: 400000, msPerBlock: 2000 },
-      { min: 400001, max: 600000, msPerBlock: 8000 },
-      { min: 600001, max: 800000, msPerBlock: 12000 },
-      { min: 800001, max: 1000000, msPerBlock: 15000 },
-    ];
-
-    let totalTime = 0;
-    let totalBlocks = 0;
-
-    for (let height = startHeight; height <= endHeight; height++) {
-      if (!this.existingBlocks.has(height)) {
-        const range = ranges.find((r) => height >= r.min && height <= r.max) ||
-          ranges[ranges.length - 1];
-        totalTime += range.msPerBlock;
-        totalBlocks++;
-      }
-    }
-
-    return totalBlocks > 0 ? totalTime / totalBlocks : 0;
-  }
 
   hasMoreBlocks() {
     return this.currentIndex < this.blocksToProcess.length;
