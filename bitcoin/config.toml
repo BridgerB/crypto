@@ -1,0 +1,25 @@
+# electrs configuration file
+# electrs is a Rust implementation of Electrum server for Bitcoin
+# electrs --conf /run/media/bridger/6TB/git/bitcoin/config.toml
+# Network type
+network = "bitcoin"
+
+# Bitcoin daemon settings
+daemon_dir = "/run/media/bridger/6TB/git/bitcoin/data/bitcoin-core-data"
+daemon_rpc_addr = "127.0.0.1:8332"
+daemon_p2p_addr = "127.0.0.1:8333"
+
+# Authentication
+cookie = false
+auth = "bridger:password"
+
+# Database settings
+db_dir = "/run/media/bridger/6TB/crypto/electrs/db"
+
+# Server settings
+electrum_rpc_addr = "127.0.0.1:50001"
+monitoring_addr = "127.0.0.1:4224"
+
+# Performance settings
+wait_duration_secs = 10
+index_batch_size = 100
