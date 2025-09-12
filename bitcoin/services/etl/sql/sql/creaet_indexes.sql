@@ -1,139 +1,86 @@
--- create_indexes.sql
--- This file contains SQL statements to create optimized indexes for the Bitcoin ETL database
--- IMPORTANT: Run this script after loading data for better performance
--- The indexes will significantly improve query performance but slow down initial data loading
--- Block table indexes
-CREATE INDEX IF NOT EXISTS idx_block_height ON block (block_height);
-
-CREATE INDEX IF NOT EXISTS idx_block_hash ON block (hash);
-
-CREATE INDEX IF NOT EXISTS idx_block_timestamp ON block (timestamp);
-
--- Transaction table indexes
-CREATE INDEX IF NOT EXISTS idx_tx_block_height ON TRANSACTION (block_height);
-
-CREATE INDEX IF NOT EXISTS idx_tx_hash ON TRANSACTION (tx_hash);
-
-CREATE INDEX IF NOT EXISTS idx_tx_is_coinbase ON TRANSACTION (is_coinbase);
-
-CREATE INDEX IF NOT EXISTS idx_tx_type ON TRANSACTION (type);
-
-CREATE INDEX IF NOT EXISTS idx_tx_fee ON TRANSACTION (fee);
-
-CREATE INDEX IF NOT EXISTS idx_tx_position ON TRANSACTION (position);
-
--- Output table indexes
-CREATE INDEX IF NOT EXISTS idx_output_tx_hash ON output (tx_hash);
-
-CREATE INDEX IF NOT EXISTS idx_output_position ON output (tx_hash, position);
-
-CREATE INDEX IF NOT EXISTS idx_output_address ON output (address);
-
-CREATE INDEX IF NOT EXISTS idx_output_address_type ON output (address_type);
-
-CREATE INDEX IF NOT EXISTS idx_output_script_type ON output (script_type);
-
-CREATE INDEX IF NOT EXISTS idx_output_value ON output (value);
-
--- Input table indexes
-CREATE INDEX IF NOT EXISTS idx_input_tx_hash ON input (tx_hash);
-
-CREATE INDEX IF NOT EXISTS idx_input_prev_tx_hash ON input (prev_tx_hash, prev_position);
-
-CREATE INDEX IF NOT EXISTS idx_input_script_type ON input (script_type);
-
--- Compound indexes for common joins
-CREATE INDEX IF NOT EXISTS idx_tx_block_composite ON TRANSACTION (block_height, tx_hash);
-
-CREATE INDEX IF NOT EXISTS idx_output_composite ON output (tx_hash, position, address);
-
--- Create specialized indexes for UTXO set queries
--- This index helps with determining which outputs are unspent
-CREATE INDEX IF NOT EXISTS idx_input_spent_reference ON input (prev_tx_hash, prev_position)
-WHERE
-    prev_tx_hash IS NOT NULL;
-
--- Create partial indexes for performance optimization
--- Separate index for SegWit transactions
-CREATE INDEX IF NOT EXISTS idx_tx_segwit ON TRANSACTION (tx_hash, block_height)
-WHERE
-    type = 'SEGWIT';
-
--- Separate index for coinbase transactions
-CREATE INDEX IF NOT EXISTS idx_tx_coinbase ON TRANSACTION (block_height, tx_hash)
-WHERE
-    is_coinbase = TRUE;
-
--- Index for addresses with high value outputs (useful for "rich list" queries)
-CREATE INDEX IF NOT EXISTS idx_high_value_outputs ON output (address, value)
-WHERE
-    value > 1000000000;
-
--- 10 BTC in satoshis
--- Add comments to tables and columns for better documentation
-COMMENT ON TABLE block IS 'Bitcoin blockchain blocks';
-
-COMMENT ON COLUMN block.block_height IS 'The height/number of the block in the blockchain';
-
-COMMENT ON COLUMN block.hash IS 'The block hash (SHA256 double hash of block header)';
-
-COMMENT ON COLUMN block.merkle_root IS 'The Merkle root hash of all transactions in the block';
-
-COMMENT ON COLUMN block.timestamp IS 'The timestamp when the block was mined';
-
-COMMENT ON COLUMN block.bits IS 'The encoded difficulty target for the block';
-
-COMMENT ON COLUMN block.nonce IS 'The nonce used to generate the required proof of work';
-
-COMMENT ON COLUMN block.reward IS 'The block reward in satoshis';
-
-COMMENT ON COLUMN block.fees IS 'The total transaction fees in satoshis';
-
-COMMENT ON TABLE TRANSACTION IS 'Bitcoin blockchain transactions';
-
-COMMENT ON COLUMN transaction.tx_hash IS 'The transaction identifier (double SHA256 hash)';
-
-COMMENT ON COLUMN transaction.is_coinbase IS 'Whether this is a coinbase transaction (generates new coins)';
-
-COMMENT ON COLUMN transaction.fee IS 'The transaction fee paid in satoshis';
-
-COMMENT ON COLUMN transaction.type IS 'The transaction type (LEGACY, SEGWIT, COINBASE, etc.)';
-
-COMMENT ON TABLE output IS 'Bitcoin transaction outputs (UTXO when unspent)';
-
-COMMENT ON COLUMN output.tx_hash IS 'The transaction hash this output belongs to';
-
-COMMENT ON COLUMN output.position IS 'The index/position of this output in the transaction';
-
-COMMENT ON COLUMN output.value IS 'The value of this output in satoshis';
-
-COMMENT ON COLUMN output.address IS 'The Bitcoin address associated with this output, if any';
-
-COMMENT ON COLUMN output.script_type IS 'The type of script used (P2PKH, P2SH, etc.)';
-
-COMMENT ON TABLE input IS 'Bitcoin transaction inputs';
-
-COMMENT ON COLUMN input.tx_hash IS 'The transaction hash this input belongs to';
-
-COMMENT ON COLUMN input.position IS 'The index/position of this input in the transaction';
-
-COMMENT ON COLUMN input.prev_tx_hash IS 'The transaction hash of the output being spent';
-
-COMMENT ON COLUMN input.prev_position IS 'The position of the output being spent';
-
--- Create statistics to help the query planner
-ANALYZE block;
-
-ANALYZE TRANSACTION;
-
-ANALYZE output;
-
-ANALYZE input;
-
--- Performance tuning options - run these as superuser if needed
--- ALTER SYSTEM SET work_mem = '128MB';
--- ALTER SYSTEM SET maintenance_work_mem = '1GB';
--- ALTER SYSTEM SET random_page_cost = 1.1; -- For SSD storage
--- ALTER SYSTEM SET max_parallel_workers_per_gather = 4;
--- ALTER SYSTEM SET max_parallel_workers = 8;
--- SELECT pg_reload_conf();
+-- -- create_indexes.sql
+-- -- This file contains SQL statements to create optimized indexes for the Bitcoin ETL database
+-- -- IMPORTANT: Run this script after loading data for better performance
+-- -- The indexes will significantly improve query performance but slow down initial data loading
+-- -- Block table indexes
+-- CREATE INDEX IF NOT EXISTS idx_block_height ON block (block_height);
+-- CREATE INDEX IF NOT EXISTS idx_block_hash ON block (hash);
+-- CREATE INDEX IF NOT EXISTS idx_block_timestamp ON block (timestamp);
+-- -- Transaction table indexes
+-- CREATE INDEX IF NOT EXISTS idx_tx_block_height ON TRANSACTION (block_height);
+-- CREATE INDEX IF NOT EXISTS idx_tx_hash ON TRANSACTION (tx_hash);
+-- CREATE INDEX IF NOT EXISTS idx_tx_is_coinbase ON TRANSACTION (is_coinbase);
+-- CREATE INDEX IF NOT EXISTS idx_tx_type ON TRANSACTION (type);
+-- CREATE INDEX IF NOT EXISTS idx_tx_fee ON TRANSACTION (fee);
+-- CREATE INDEX IF NOT EXISTS idx_tx_position ON TRANSACTION (position);
+-- -- Output table indexes
+-- CREATE INDEX IF NOT EXISTS idx_output_tx_hash ON output (tx_hash);
+-- CREATE INDEX IF NOT EXISTS idx_output_position ON output (tx_hash, position);
+-- CREATE INDEX IF NOT EXISTS idx_output_address ON output (address);
+-- CREATE INDEX IF NOT EXISTS idx_output_address_type ON output (address_type);
+-- CREATE INDEX IF NOT EXISTS idx_output_script_type ON output (script_type);
+-- CREATE INDEX IF NOT EXISTS idx_output_value ON output (value);
+-- -- Input table indexes
+-- CREATE INDEX IF NOT EXISTS idx_input_tx_hash ON input (tx_hash);
+-- CREATE INDEX IF NOT EXISTS idx_input_prev_tx_hash ON input (prev_tx_hash, prev_position);
+-- CREATE INDEX IF NOT EXISTS idx_input_script_type ON input (script_type);
+-- -- Compound indexes for common joins
+-- CREATE INDEX IF NOT EXISTS idx_tx_block_composite ON TRANSACTION (block_height, tx_hash);
+-- CREATE INDEX IF NOT EXISTS idx_output_composite ON output (tx_hash, position, address);
+-- -- Create specialized indexes for UTXO set queries
+-- -- This index helps with determining which outputs are unspent
+-- CREATE INDEX IF NOT EXISTS idx_input_spent_reference ON input (prev_tx_hash, prev_position)
+-- WHERE
+--     prev_tx_hash IS NOT NULL;
+-- -- Create partial indexes for performance optimization
+-- -- Separate index for SegWit transactions
+-- CREATE INDEX IF NOT EXISTS idx_tx_segwit ON TRANSACTION (tx_hash, block_height)
+-- WHERE
+--     type = 'SEGWIT';
+-- -- Separate index for coinbase transactions
+-- CREATE INDEX IF NOT EXISTS idx_tx_coinbase ON TRANSACTION (block_height, tx_hash)
+-- WHERE
+--     is_coinbase = TRUE;
+-- -- Index for addresses with high value outputs (useful for "rich list" queries)
+-- CREATE INDEX IF NOT EXISTS idx_high_value_outputs ON output (address, value)
+-- WHERE
+--     value > 1000000000;
+-- -- 10 BTC in satoshis
+-- -- Add comments to tables and columns for better documentation
+-- COMMENT ON TABLE block IS 'Bitcoin blockchain blocks';
+-- COMMENT ON COLUMN block.block_height IS 'The height/number of the block in the blockchain';
+-- COMMENT ON COLUMN block.hash IS 'The block hash (SHA256 double hash of block header)';
+-- COMMENT ON COLUMN block.merkle_root IS 'The Merkle root hash of all transactions in the block';
+-- COMMENT ON COLUMN block.timestamp IS 'The timestamp when the block was mined';
+-- COMMENT ON COLUMN block.bits IS 'The encoded difficulty target for the block';
+-- COMMENT ON COLUMN block.nonce IS 'The nonce used to generate the required proof of work';
+-- COMMENT ON COLUMN block.reward IS 'The block reward in satoshis';
+-- COMMENT ON COLUMN block.fees IS 'The total transaction fees in satoshis';
+-- COMMENT ON TABLE TRANSACTION IS 'Bitcoin blockchain transactions';
+-- COMMENT ON COLUMN transaction.tx_hash IS 'The transaction identifier (double SHA256 hash)';
+-- COMMENT ON COLUMN transaction.is_coinbase IS 'Whether this is a coinbase transaction (generates new coins)';
+-- COMMENT ON COLUMN transaction.fee IS 'The transaction fee paid in satoshis';
+-- COMMENT ON COLUMN transaction.type IS 'The transaction type (LEGACY, SEGWIT, COINBASE, etc.)';
+-- COMMENT ON TABLE output IS 'Bitcoin transaction outputs (UTXO when unspent)';
+-- COMMENT ON COLUMN output.tx_hash IS 'The transaction hash this output belongs to';
+-- COMMENT ON COLUMN output.position IS 'The index/position of this output in the transaction';
+-- COMMENT ON COLUMN output.value IS 'The value of this output in satoshis';
+-- COMMENT ON COLUMN output.address IS 'The Bitcoin address associated with this output, if any';
+-- COMMENT ON COLUMN output.script_type IS 'The type of script used (P2PKH, P2SH, etc.)';
+-- COMMENT ON TABLE input IS 'Bitcoin transaction inputs';
+-- COMMENT ON COLUMN input.tx_hash IS 'The transaction hash this input belongs to';
+-- COMMENT ON COLUMN input.position IS 'The index/position of this input in the transaction';
+-- COMMENT ON COLUMN input.prev_tx_hash IS 'The transaction hash of the output being spent';
+-- COMMENT ON COLUMN input.prev_position IS 'The position of the output being spent';
+-- -- Create statistics to help the query planner
+-- ANALYZE block;
+-- ANALYZE TRANSACTION;
+-- ANALYZE output;
+-- ANALYZE input;
+-- -- Performance tuning options - run these as superuser if needed
+-- -- ALTER SYSTEM SET work_mem = '128MB';
+-- -- ALTER SYSTEM SET maintenance_work_mem = '1GB';
+-- -- ALTER SYSTEM SET random_page_cost = 1.1; -- For SSD storage
+-- -- ALTER SYSTEM SET max_parallel_workers_per_gather = 4;
+-- -- ALTER SYSTEM SET max_parallel_workers = 8;
+-- -- SELECT pg_reload_conf();

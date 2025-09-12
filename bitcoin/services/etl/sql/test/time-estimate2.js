@@ -200,12 +200,16 @@ async function runTestRange(range) {
 
       console.log(
         `Range ${range.start}-${range.end} completed in ${
-          formatTime(duration)
+          formatTime(
+            duration,
+          )
         }`,
       );
       console.log(
         `Average: ${msPerBlock.toFixed(2)}ms per block, ${
-          blocksPerSecond.toFixed(2)
+          blocksPerSecond.toFixed(
+            2,
+          )
         } blocks/sec`,
       );
 
@@ -320,9 +324,13 @@ function analyzeResults() {
     const simulated = result.simulated ? "(simulated)" : "";
     console.log(
       `${result.range.label.padEnd(20)} | ${
-        result.msPerBlock.toFixed(2).padStart(8)
+        result.msPerBlock
+          .toFixed(2)
+          .padStart(8)
       }ms/block | ${
-        result.blocksPerSecond.toFixed(2).padStart(7)
+        result.blocksPerSecond
+          .toFixed(2)
+          .padStart(7)
       } blocks/sec ${simulated}`,
     );
   });
@@ -381,9 +389,15 @@ function analyzeResults() {
 
     console.log(
       `${range.label.padEnd(20)} | ${
-        range.min.toLocaleString().padStart(8)
+        range.min
+          .toLocaleString()
+          .padStart(
+            8,
+          )
       } - ${range.max.toLocaleString().padStart(8)} | ${
-        blocksInRange.toLocaleString().padStart(8)
+        blocksInRange
+          .toLocaleString()
+          .padStart(8)
       } blocks | ${formatTime(timeForRange).padStart(10)}`,
     );
   });
@@ -409,12 +423,16 @@ function analyzeResults() {
   console.log(`Total Blocks: ${totalBlocks.toLocaleString()}`);
   console.log(
     `Average Speed: ${overallAverage.msPerBlock.toFixed(2)}ms per block (${
-      overallAverage.blocksPerSecond.toFixed(2)
+      overallAverage.blocksPerSecond.toFixed(
+        2,
+      )
     } blocks/sec)`,
   );
   console.log(
     `\nTotal Processing Time with ${WORKERS_PER_TEST} workers: ${
-      formatTime(parallelTimeMs)
+      formatTime(
+        parallelTimeMs,
+      )
     }`,
   );
   console.log(`  • ${totalSeconds.toLocaleString()} seconds`);
@@ -446,7 +464,9 @@ function analyzeResults() {
       const scaledDays = totalDays / scaleFactor;
       console.log(
         `With ${workerCount} workers: ${scaledDays.toFixed(2)} days (${
-          (totalDays / scaledDays).toFixed(2)
+          (
+            totalDays / scaledDays
+          ).toFixed(2)
         }x faster)`,
       );
     }
@@ -464,7 +484,9 @@ function analyzeResults() {
     const adjustedDays = totalDays * storage.factor;
     console.log(
       `${storage.name.padEnd(20)}: ${
-        adjustedDays.toFixed(2)
+        adjustedDays.toFixed(
+          2,
+        )
       } days with ${WORKERS_PER_TEST} workers`,
     );
   });

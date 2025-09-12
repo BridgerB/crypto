@@ -63,7 +63,10 @@ async function dropAllTables() {
       try {
         console.log("Trying with psql command instead...");
         const psqlCommand = `psql "${databaseUrl}" -c "${
-          dropQuery.replace(/"/g, '\\"')
+          dropQuery.replace(
+            /"/g,
+            '\\"',
+          )
         }"`;
         await execAsync(psqlCommand);
         console.log(

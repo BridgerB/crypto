@@ -100,7 +100,9 @@ function estimateProcessingTime() {
     if (range.blocksToProcess > 0) {
       console.log(
         `${range.label}: ${range.blocksToProcess.toLocaleString()} blocks × ${
-          range.avgProcessingTimeMs.toFixed(2)
+          range.avgProcessingTimeMs.toFixed(
+            2,
+          )
         }ms = ${formatTime(range.totalTimeMs / 1000)}`,
       );
     }
@@ -140,7 +142,9 @@ function estimateProcessingTime() {
   );
   console.log(
     `Ratio: Recent blocks take ${
-      (lateBlockAvg / earlyBlockAvg).toFixed(1)
+      (lateBlockAvg / earlyBlockAvg).toFixed(
+        1,
+      )
     }× longer than early blocks`,
   );
 

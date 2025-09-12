@@ -75,7 +75,10 @@ function showHelp() {
   console.log("  --verbose, -v            Enable verbose logging");
   console.log(
     `  --workers, -w <num>      Number of worker processes (default: ${
-      Math.max(1, os.cpus().length - 1)
+      Math.max(
+        1,
+        os.cpus().length - 1,
+      )
     })`,
   );
   console.log(

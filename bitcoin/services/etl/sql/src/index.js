@@ -115,12 +115,16 @@ class BitcoinETL {
     // Simple progress output
     console.log(
       `\nProgress: ${completedBlocks}/${this.totalBlocksToProcess} blocks (${
-        progress.toFixed(1)
+        progress.toFixed(
+          1,
+        )
       }%)`,
     );
     console.log(
       `Rate: ${
-        currentRate.toFixed(2)
+        currentRate.toFixed(
+          2,
+        )
       } blocks/sec, Success: ${this.results.success}, Failed: ${this.results.failed}`,
     );
     console.log(`Active Workers: ${this.activeWorkers}/${this.maxWorkers}`);
@@ -162,7 +166,9 @@ class BitcoinETL {
         this.log(
           "info",
           `Existing range: ${sortedExisting[0].toLocaleString()} to ${
-            sortedExisting[sortedExisting.length - 1].toLocaleString()
+            sortedExisting[
+              sortedExisting.length - 1
+            ].toLocaleString()
           }`,
         );
       }
@@ -219,10 +225,8 @@ class BitcoinETL {
       );
     }
 
-
     return true;
   }
-
 
   hasMoreBlocks() {
     return this.currentIndex < this.blocksToProcess.length;

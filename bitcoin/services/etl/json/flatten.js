@@ -19,7 +19,8 @@ class AddressFlattener {
 
   // Get all JSON files sorted by block number
   getJsonFiles() {
-    const files = fs.readdirSync(this.addressDir)
+    const files = fs
+      .readdirSync(this.addressDir)
       .filter((file) => file.endsWith(".json"))
       .sort((a, b) => {
         // Sort numerically by block number

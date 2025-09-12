@@ -218,7 +218,10 @@ class BlockProcessor {
         workerLog(
           "info",
           `Retrieved hash for block ${blockHeight.toLocaleString()}: ${
-            blockHash.substring(0, 16)
+            blockHash.substring(
+              0,
+              16,
+            )
           }...`,
         );
       }
@@ -474,9 +477,14 @@ class BlockProcessor {
           workerLog(
             "info",
             `Processing transaction ${
-              (i + 1).toLocaleString()
+              (
+                i + 1
+              ).toLocaleString()
             }/${blockData.tx.length.toLocaleString()}: ${
-              tx.txid.substring(0, 16)
+              tx.txid.substring(
+                0,
+                16,
+              )
             }...`,
           );
         }

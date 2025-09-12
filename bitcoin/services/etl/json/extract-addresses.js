@@ -19,8 +19,9 @@ const DATA_DIR = "/run/media/bridger/6TB/crypto/bitcoin/addresses";
 
 // RPC Functions
 function createRPCAuth() {
-  const auth = Buffer.from(`${RPC_CONFIG.user}:${RPC_CONFIG.password}`)
-    .toString("base64");
+  const auth = Buffer.from(
+    `${RPC_CONFIG.user}:${RPC_CONFIG.password}`,
+  ).toString("base64");
   return `Basic ${auth}`;
 }
 
@@ -171,20 +172,26 @@ function deriveAddressFromPubkey(scriptHex) {
 
     // Create P2PKH address from public key:
     // 1. SHA256 hash of the public key
-    const sha256Hash = crypto.createHash("sha256").update(pubkeyBuffer)
+    const sha256Hash = crypto
+      .createHash("sha256")
+      .update(pubkeyBuffer)
       .digest();
 
     // 2. RIPEMD160 hash of the SHA256 hash
-    const ripemd160Hash = crypto.createHash("ripemd160").update(sha256Hash)
+    const ripemd160Hash = crypto
+      .createHash("ripemd160")
+      .update(sha256Hash)
       .digest();
 
     // 3. Add version byte (0x00 for mainnet P2PKH)
     const versionedHash = Buffer.concat([Buffer.from([0x00]), ripemd160Hash]);
 
     // 4. Double SHA256 for checksum
-    const checksum = crypto.createHash("sha256").update(
-      crypto.createHash("sha256").update(versionedHash).digest(),
-    ).digest().slice(0, 4);
+    const checksum = crypto
+      .createHash("sha256")
+      .update(crypto.createHash("sha256").update(versionedHash).digest())
+      .digest()
+      .slice(0, 4);
 
     // 5. Concatenate and encode in Base58
     const fullHash = Buffer.concat([versionedHash, checksum]);
