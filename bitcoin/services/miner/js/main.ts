@@ -1,4 +1,5 @@
 import { BitcoinRPCClient, BlockTemplate } from "./rpc.ts";
+import { doubleSha256Hex, sha256Hex } from "./crypto.ts";
 
 function logMiningData(blockTemplate: BlockTemplate) {
   console.log("=== BITCOIN MINING DATA ===\n");
@@ -95,8 +96,32 @@ function countLeadingZeros(hexString: string): number {
   return count;
 }
 
+async function testCrypto() {
+  console.log("=== CRYPTO TEST VECTORS ===\n");
+
+  // Known test vector for SHA-256
+  const testInput = "hello";
+  const expectedSha256 =
+    "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+
+  const actualSha256 = await sha256Hex(testInput);
+  const actualDoubleSha256 = await doubleSha256Hex(testInput);
+
+  console.log(`Input: "${testInput}"`);
+  console.log(`Expected SHA-256: ${expectedSha256}`);
+  console.log(`Actual SHA-256:   ${actualSha256}`);
+  console.log(
+    `✅ SHA-256 ${actualSha256 === expectedSha256 ? "CORRECT" : "FAILED"}`,
+  );
+
+  console.log(`Double SHA-256:   ${actualDoubleSha256}`);
+  console.log("✅ Double SHA-256 function working\n");
+}
+
 async function main() {
   try {
+    await testCrypto();
+
     console.log("Connecting to Bitcoin Core RPC...\n");
 
     const rpc = new BitcoinRPCClient();
