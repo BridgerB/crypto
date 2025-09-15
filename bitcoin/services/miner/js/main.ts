@@ -1,5 +1,5 @@
 import { BitcoinRPCClient, BlockTemplate } from "./rpc.ts";
-import { doubleSha256Hex, sha256Hex } from "./crypto.ts";
+import { doubleSha256Hex, sha256Hex, doubleSha256FromHex } from "./crypto.ts";
 
 function logMiningData(blockTemplate: BlockTemplate) {
   console.log("=== BITCOIN MINING DATA ===\n");
@@ -118,6 +118,25 @@ async function testCrypto() {
   console.log("✅ Double SHA-256 function working\n");
 }
 
+async function testRealBitcoinData(blockTemplate: BlockTemplate) {
+  console.log("=== HASHING REAL BITCOIN DATA ===\n");
+
+  // Hash the previous block hash (real Bitcoin data)
+  const prevBlockHash = blockTemplate.previousblockhash;
+  const hashedPrevBlock = await doubleSha256FromHex(prevBlockHash);
+
+  console.log(`Previous Block Hash: ${prevBlockHash}`);
+  console.log(`Double SHA-256 Result: ${hashedPrevBlock}`);
+  console.log("✅ Successfully hashed real Bitcoin block data\n");
+
+  // Also hash the target for fun
+  const target = blockTemplate.target;
+  const hashedTarget = await doubleSha256FromHex(target);
+  console.log(`Target: ${target}`);
+  console.log(`Target Double SHA-256: ${hashedTarget}`);
+  console.log("✅ Can process Bitcoin hex data\n");
+}
+
 async function main() {
   try {
     await testCrypto();
@@ -127,6 +146,7 @@ async function main() {
     const rpc = new BitcoinRPCClient();
     const blockTemplate = await rpc.getBlockTemplate();
 
+    await testRealBitcoinData(blockTemplate);
     logMiningData(blockTemplate);
   } catch (error) {
     console.error("Error fetching mining data:", error);

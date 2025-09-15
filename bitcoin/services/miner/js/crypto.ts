@@ -18,6 +18,17 @@ export function bytesToHex(bytes: Uint8Array): string {
     .join("");
 }
 
+export function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new Error("Hex string must have even length");
+  }
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
 export async function sha256Hex(input: string): Promise<string> {
   const bytes = stringToBytes(input);
   const hash = await sha256(bytes);
@@ -26,6 +37,12 @@ export async function sha256Hex(input: string): Promise<string> {
 
 export async function doubleSha256Hex(input: string): Promise<string> {
   const bytes = stringToBytes(input);
+  const hash = await doubleSha256(bytes);
+  return bytesToHex(hash);
+}
+
+export async function doubleSha256FromHex(hexInput: string): Promise<string> {
+  const bytes = hexToBytes(hexInput);
   const hash = await doubleSha256(bytes);
   return bytesToHex(hash);
 }
