@@ -1,5 +1,16 @@
 import { BitcoinRPCClient, BlockTemplate } from "./rpc.ts";
-import { doubleSha256Hex, sha256Hex, doubleSha256FromHex } from "./crypto.ts";
+import {
+  bytesToHex,
+  doubleSha256,
+  doubleSha256FromHex,
+  doubleSha256Hex,
+  sha256Hex,
+} from "./crypto.ts";
+import {
+  BlockHeader,
+  createDummyMerkleRoot,
+  serializeBlockHeader,
+} from "./block.ts";
 
 function logMiningData(blockTemplate: BlockTemplate) {
   console.log("=== BITCOIN MINING DATA ===\n");
@@ -137,6 +148,54 @@ async function testRealBitcoinData(blockTemplate: BlockTemplate) {
   console.log("✅ Can process Bitcoin hex data\n");
 }
 
+async function testBlockHeaderConstruction(blockTemplate: BlockTemplate) {
+  console.log("=== BUILDING REAL BLOCK HEADER ===\n");
+
+  // Construct a real block header from template data
+  const blockHeader: BlockHeader = {
+    version: blockTemplate.version,
+    previousBlockHash: blockTemplate.previousblockhash,
+    merkleRoot: createDummyMerkleRoot(), // TODO: calculate real merkle root
+    time: blockTemplate.curtime,
+    bits: blockTemplate.bits,
+    nonce: 0, // Start with nonce 0
+  };
+
+  console.log("Block Header Components:");
+  console.log(`  Version: ${blockHeader.version}`);
+  console.log(`  Previous Hash: ${blockHeader.previousBlockHash}`);
+  console.log(`  Merkle Root: ${blockHeader.merkleRoot} (dummy)`);
+  console.log(`  Time: ${blockHeader.time}`);
+  console.log(`  Bits: ${blockHeader.bits}`);
+  console.log(`  Nonce: ${blockHeader.nonce}`);
+
+  // Serialize to 80-byte binary format
+  const serializedHeader = serializeBlockHeader(blockHeader);
+  console.log(
+    `\nSerialized Header (80 bytes): ${bytesToHex(serializedHeader)}`,
+  );
+  console.log(`Length: ${serializedHeader.length} bytes`);
+
+  // Hash the block header (this is what miners do!)
+  const headerHash = await doubleSha256(serializedHeader);
+  const headerHashHex = bytesToHex(headerHash);
+
+  console.log(`\nBlock Header Hash: ${headerHashHex}`);
+  console.log(`Target:            ${blockTemplate.target}`);
+
+  // Check if this would be a valid block
+  const isValid = headerHashHex < blockTemplate.target;
+  console.log(`Valid Block: ${isValid ? "✅ YES (WINNING BLOCK!)" : "❌ NO"}`);
+
+  if (!isValid) {
+    console.log("Need to increment nonce and try again...");
+  }
+
+  console.log(
+    "✅ Successfully built and hashed a real Bitcoin block header!\n",
+  );
+}
+
 async function main() {
   try {
     await testCrypto();
@@ -147,6 +206,7 @@ async function main() {
     const blockTemplate = await rpc.getBlockTemplate();
 
     await testRealBitcoinData(blockTemplate);
+    await testBlockHeaderConstruction(blockTemplate);
     logMiningData(blockTemplate);
   } catch (error) {
     console.error("Error fetching mining data:", error);
