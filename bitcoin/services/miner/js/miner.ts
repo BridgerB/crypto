@@ -37,6 +37,9 @@ export async function mine(
     const headerHash = await doubleSha256(serializedHeader);
     const headerHashHex = bytesToHex(headerHash);
 
+    // Log every single hash attempt
+    console.log(`Nonce ${nonce.toLocaleString()}: ${headerHashHex}`);
+
     // Check if we found a winning block
     if (headerHashHex < blockTemplate.target) {
       // WINNING BLOCK FOUND - STOP EVERYTHING
