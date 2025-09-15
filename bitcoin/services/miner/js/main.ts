@@ -215,13 +215,21 @@ async function main() {
 
     if (result.success) {
       console.log(`\n🎉 INCREDIBLE! Found a winning block!`);
-      console.log(`This would be worth ${(3.125 * 115000).toLocaleString()} USD!`);
+      console.log(
+        `This would be worth ${(3.125 * 115000).toLocaleString()} USD!`,
+      );
     } else {
       console.log(`\nMining statistics:`);
       console.log(`- Attempts: ${result.attempts.toLocaleString()}`);
       console.log(`- Duration: ${result.duration.toFixed(2)} seconds`);
-      console.log(`- Hash rate: ${result.hashRate.toLocaleString()} hashes/second`);
-      console.log(`- Probability of success: ${(result.attempts / 584295720480429600000000 * 100).toExponential(2)}%`);
+      console.log(
+        `- Hash rate: ${result.hashRate.toLocaleString()} hashes/second`,
+      );
+      console.log(
+        `- Probability of success: ${
+          (result.attempts / 584295720480429600000000 * 100).toExponential(2)
+        }%`,
+      );
     }
 
     logMiningData(blockTemplate);

@@ -1,6 +1,10 @@
 import { BlockTemplate } from "./rpc.ts";
-import { doubleSha256, bytesToHex } from "./crypto.ts";
-import { BlockHeader, serializeBlockHeader, createDummyMerkleRoot } from "./block.ts";
+import { bytesToHex, doubleSha256 } from "./crypto.ts";
+import {
+  BlockHeader,
+  createDummyMerkleRoot,
+  serializeBlockHeader,
+} from "./block.ts";
 
 export interface MiningResult {
   success: boolean;
@@ -14,9 +18,11 @@ export interface MiningResult {
 export async function simpleMine(
   blockTemplate: BlockTemplate,
   maxAttempts: number = 10000,
-  progressInterval: number = 1000
+  progressInterval: number = 1000,
 ): Promise<MiningResult> {
-  console.log(`🚀 Starting mining with ${maxAttempts.toLocaleString()} attempts...\n`);
+  console.log(
+    `🚀 Starting mining with ${maxAttempts.toLocaleString()} attempts...\n`,
+  );
 
   const startTime = Date.now();
 
@@ -27,7 +33,7 @@ export async function simpleMine(
     merkleRoot: createDummyMerkleRoot(),
     time: blockTemplate.curtime,
     bits: blockTemplate.bits,
-    nonce: 0
+    nonce: 0,
   };
 
   // Mining loop
@@ -57,7 +63,7 @@ export async function simpleMine(
         hash: headerHashHex,
         attempts: nonce + 1,
         duration,
-        hashRate
+        hashRate,
       };
     }
 
@@ -65,7 +71,11 @@ export async function simpleMine(
     if ((nonce + 1) % progressInterval === 0) {
       const elapsed = (Date.now() - startTime) / 1000;
       const currentHashRate = Math.round((nonce + 1) / elapsed);
-      console.log(`Mining attempt ${(nonce + 1).toLocaleString()}: hash ${headerHashHex.substring(0, 16)}... (${currentHashRate} h/s)`);
+      console.log(
+        `Mining attempt ${(nonce + 1).toLocaleString()}: hash ${
+          headerHashHex.substring(0, 16)
+        }... (${currentHashRate} h/s)`,
+      );
     }
   }
 
@@ -74,7 +84,9 @@ export async function simpleMine(
   const duration = (endTime - startTime) / 1000;
   const hashRate = Math.round(maxAttempts / duration);
 
-  console.log(`\n❌ No winning block found after ${maxAttempts.toLocaleString()} attempts`);
+  console.log(
+    `\n❌ No winning block found after ${maxAttempts.toLocaleString()} attempts`,
+  );
   console.log(`Duration: ${duration.toFixed(2)} seconds`);
   console.log(`Hash rate: ${hashRate.toLocaleString()} hashes/second`);
 
@@ -82,6 +94,6 @@ export async function simpleMine(
     success: false,
     attempts: maxAttempts,
     duration,
-    hashRate
+    hashRate,
   };
 }
