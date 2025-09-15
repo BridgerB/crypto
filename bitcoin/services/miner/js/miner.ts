@@ -8,24 +8,14 @@ import {
 
 export interface MiningResult {
   success: boolean;
-  nonce?: number;
-  hash?: string;
+  nonce: number;
+  hash: string;
   attempts: number;
-  duration: number;
-  hashRate: number;
 }
 
-export async function simpleMine(
+export async function mine(
   blockTemplate: BlockTemplate,
-  maxAttempts: number = 10000,
-  progressInterval: number = 1000,
 ): Promise<MiningResult> {
-  console.log(
-    `🚀 Starting mining with ${maxAttempts.toLocaleString()} attempts...\n`,
-  );
-
-  const startTime = Date.now();
-
   // Create base block header
   const baseHeader: BlockHeader = {
     version: blockTemplate.version,
@@ -36,8 +26,9 @@ export async function simpleMine(
     nonce: 0,
   };
 
-  // Mining loop
-  for (let nonce = 0; nonce < maxAttempts; nonce++) {
+  // Mining loop - continue until we find a block
+  let nonce = 0;
+  while (true) {
     // Update nonce
     baseHeader.nonce = nonce;
 
@@ -48,52 +39,19 @@ export async function simpleMine(
 
     // Check if we found a winning block
     if (headerHashHex < blockTemplate.target) {
-      const endTime = Date.now();
-      const duration = (endTime - startTime) / 1000;
-      const hashRate = Math.round(nonce / duration);
+      // WINNING BLOCK FOUND - STOP EVERYTHING
+      console.log(`\n🎉🎉🎉 WINNING BITCOIN BLOCK FOUND! 🎉🎉🎉`);
+      console.log(`💰 BLOCK REWARD: 3.125 BTC (~$359,375 USD)`);
+      console.log(`🔢 Winning Nonce: ${nonce.toLocaleString()}`);
+      console.log(`🏆 Block Hash: ${headerHashHex}`);
+      console.log(`🎯 Target: ${blockTemplate.target}`);
+      console.log(`📊 Total Attempts: ${(nonce + 1).toLocaleString()}`);
+      console.log(`\n🚀 STOPPING MINER - BLOCK FOUND! 🚀`);
 
-      console.log(`🎉 WINNING BLOCK FOUND!`);
-      console.log(`Nonce: ${nonce}`);
-      console.log(`Hash: ${headerHashHex}`);
-      console.log(`Target: ${blockTemplate.target}`);
-
-      return {
-        success: true,
-        nonce,
-        hash: headerHashHex,
-        attempts: nonce + 1,
-        duration,
-        hashRate,
-      };
+      // Exit the entire program
+      Deno.exit(0);
     }
 
-    // Show progress
-    if ((nonce + 1) % progressInterval === 0) {
-      const elapsed = (Date.now() - startTime) / 1000;
-      const currentHashRate = Math.round((nonce + 1) / elapsed);
-      console.log(
-        `Mining attempt ${(nonce + 1).toLocaleString()}: hash ${
-          headerHashHex.substring(0, 16)
-        }... (${currentHashRate} h/s)`,
-      );
-    }
+    nonce++;
   }
-
-  // No winning block found
-  const endTime = Date.now();
-  const duration = (endTime - startTime) / 1000;
-  const hashRate = Math.round(maxAttempts / duration);
-
-  console.log(
-    `\n❌ No winning block found after ${maxAttempts.toLocaleString()} attempts`,
-  );
-  console.log(`Duration: ${duration.toFixed(2)} seconds`);
-  console.log(`Hash rate: ${hashRate.toLocaleString()} hashes/second`);
-
-  return {
-    success: false,
-    attempts: maxAttempts,
-    duration,
-    hashRate,
-  };
 }
