@@ -4,6 +4,7 @@
     "lib": ["dom", "dom.iterable", "es6", "deno.ns"]
   },
   "tasks": {
-    "start": "deno run --allow-net main.ts"
+    "start": "deno run --allow-net main.ts",
+    "benchmark": "deno run --allow-net benchmark.ts"
   }
 }
