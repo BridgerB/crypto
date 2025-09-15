@@ -11,6 +11,7 @@ import {
   createDummyMerkleRoot,
   serializeBlockHeader,
 } from "./block.ts";
+import { simpleMine } from "./miner.ts";
 
 function logMiningData(blockTemplate: BlockTemplate) {
   console.log("=== BITCOIN MINING DATA ===\n");
@@ -207,6 +208,22 @@ async function main() {
 
     await testRealBitcoinData(blockTemplate);
     await testBlockHeaderConstruction(blockTemplate);
+
+    // Actually try mining!
+    console.log("=== STARTING BITCOIN MINING ===\n");
+    const result = await simpleMine(blockTemplate, 10000, 1000);
+
+    if (result.success) {
+      console.log(`\n🎉 INCREDIBLE! Found a winning block!`);
+      console.log(`This would be worth ${(3.125 * 115000).toLocaleString()} USD!`);
+    } else {
+      console.log(`\nMining statistics:`);
+      console.log(`- Attempts: ${result.attempts.toLocaleString()}`);
+      console.log(`- Duration: ${result.duration.toFixed(2)} seconds`);
+      console.log(`- Hash rate: ${result.hashRate.toLocaleString()} hashes/second`);
+      console.log(`- Probability of success: ${(result.attempts / 584295720480429600000000 * 100).toExponential(2)}%`);
+    }
+
     logMiningData(blockTemplate);
   } catch (error) {
     console.error("Error fetching mining data:", error);
