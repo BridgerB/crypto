@@ -12,6 +12,12 @@ export interface WorkerStopMessage {
   type: "stop";
 }
 
+export interface WorkerTemplateUpdateMessage {
+  type: "template_update";
+  blockTemplate: BlockTemplate;
+  shouldRestart: boolean;
+}
+
 export interface WorkerProgressMessage {
   type: "progress";
   workerId: number;
@@ -28,6 +34,9 @@ export interface WorkerFoundMessage {
   hash: string;
   attempts: number;
   totalAttempts: number;
+  merkleRoot: string;
+  blockHeight: number;
+  serializedBlock?: string;
 }
 
 export interface WorkerExhaustedMessage {
@@ -44,7 +53,8 @@ export interface WorkerErrorMessage {
 
 export type WorkerMessage =
   | WorkerStartMessage
-  | WorkerStopMessage;
+  | WorkerStopMessage
+  | WorkerTemplateUpdateMessage;
 
 export type WorkerResponse =
   | WorkerProgressMessage

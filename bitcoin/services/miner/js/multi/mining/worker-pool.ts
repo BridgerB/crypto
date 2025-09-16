@@ -23,6 +23,7 @@ import type {
   WorkerResponse,
   WorkerStartMessage,
   WorkerStopMessage,
+  WorkerTemplateUpdateMessage,
 } from "../types/worker.ts";
 import type { Result } from "../types/config.ts";
 
@@ -39,6 +40,10 @@ export function createWorkerPool(
   dependencies: WorkerPoolDependencies,
 ): {
   startMining: (blockTemplate: BlockTemplate) => Promise<Result<void>>;
+  updateBlockTemplate: (
+    newTemplate: BlockTemplate,
+    shouldRestart: boolean,
+  ) => Promise<Result<void>>;
   stopAllWorkers: () => void;
   getState: () => MiningState;
 } {
@@ -61,14 +66,17 @@ export function createWorkerPool(
 
       case "found":
         const progress = calculateProgress(state);
-        logBlockFound(
-          message.workerId,
-          message.nonce,
-          message.hash,
-          message.attempts,
-          progress.totalAttempts,
-          dependencies.logger,
+        dependencies.logger.info(
+          `\n🎉 VALID BLOCK FOUND! 🎉\n` +
+            `Worker: ${message.workerId}\n` +
+            `Nonce: ${message.nonce.toLocaleString()}\n` +
+            `Hash: ${message.hash}\n` +
+            `Block Height: ${message.blockHeight}\n` +
+            `Merkle Root: ${message.merkleRoot}\n` +
+            `Attempts: ${message.attempts.toLocaleString()}\n` +
+            `Total Attempts: ${progress.totalAttempts.toLocaleString()}`,
         );
+
         dispatch({
           type: "BLOCK_FOUND",
           workerId: message.workerId,
@@ -196,9 +204,11 @@ export function createWorkerPool(
     dependencies.logger.info(`💡 Each worker will mine a separate nonce range`);
     dependencies.logger.info(`💡 Press Ctrl+C to stop mining\n`);
 
+    const isGenesis = blockTemplate.height === 0;
     const nonceRanges = calculateNonceRanges(
       config.workerCount,
       config.maxNonceValue,
+      isGenesis,
     );
 
     for (let i = 0; i < config.workerCount; i++) {
@@ -249,10 +259,64 @@ export function createWorkerPool(
     dispatch({ type: "STOP_MINING" });
   };
 
+  const updateBlockTemplate = async (
+    newTemplate: BlockTemplate,
+    shouldRestart: boolean = true,
+  ): Promise<Result<void>> => {
+    if (!state.isRunning) {
+      return { success: false, error: "Mining is not running" };
+    }
+
+    dependencies.logger.info(
+      `🔄 Updating block template for all ${state.workers.length} workers (Height: ${newTemplate.height})`,
+    );
+
+    const updateMessage: WorkerTemplateUpdateMessage = {
+      type: "template_update",
+      blockTemplate: newTemplate,
+      shouldRestart,
+    };
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Send update to all active workers
+    state.workers.forEach((workerInfo) => {
+      if (workerInfo.worker && workerInfo.active) {
+        try {
+          workerInfo.worker.postMessage(updateMessage);
+          successCount++;
+        } catch (error) {
+          dependencies.logger.warn(
+            `Failed to send template update to worker ${workerInfo.id}: ${error}`,
+          );
+          errorCount++;
+        }
+      }
+    });
+
+    if (shouldRestart) {
+      dependencies.logger.info(
+        `⚡ Template update sent to ${successCount} workers (restart required)`,
+      );
+    } else {
+      dependencies.logger.info(
+        `🔄 Template update sent to ${successCount} workers (no restart)`,
+      );
+    }
+
+    if (errorCount > 0) {
+      dependencies.logger.warn(`Failed to update ${errorCount} workers`);
+    }
+
+    return { success: true, data: undefined };
+  };
+
   const getState = (): MiningState => state;
 
   return {
     startMining,
+    updateBlockTemplate,
     stopAllWorkers,
     getState,
   };

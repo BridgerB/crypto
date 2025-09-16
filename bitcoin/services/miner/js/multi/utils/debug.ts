@@ -4,6 +4,7 @@ import {
   sha256Hex,
 } from "../crypto/operations.ts";
 import {
+  calculateMerkleRootFromTemplate,
   createBlockHeader,
   hashBlockHeader,
   serializeBlockHeader,
@@ -84,7 +85,16 @@ export async function testBlockHeaderConstruction(
   blockTemplate: BlockTemplate,
   logger: Logger,
 ): Promise<Result<void>> {
-  const blockHeader = createBlockHeader(blockTemplate, 0);
+  // Calculate merkle root from block template
+  const merkleResult = await calculateMerkleRootFromTemplate(blockTemplate);
+  if (!merkleResult.success) {
+    return {
+      success: false,
+      error: `Failed to calculate merkle root: ${merkleResult.error}`,
+    };
+  }
+
+  const blockHeader = createBlockHeader(blockTemplate, merkleResult.data, 0);
 
   const serializationResult = serializeBlockHeader(blockHeader);
   if (!serializationResult.success) {
@@ -109,6 +119,7 @@ export async function testBlockHeaderConstruction(
 
   logBlockHeaderConstruction(
     blockTemplate,
+    merkleResult.data,
     serializedHeaderHex,
     serializationResult.data.length,
     hashResult.data,

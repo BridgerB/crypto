@@ -1,4 +1,4 @@
-import { mineAttempt } from "./mining/core.ts";
+import { calculateMerkleRootFromTemplate, mineAttempt } from "./mining/core.ts";
 import { MINING_CONSTANTS } from "./utils/constants.ts";
 import type { BlockTemplate } from "./types/bitcoin.ts";
 import type {
@@ -13,12 +13,16 @@ interface WorkerState {
   isRunning: boolean;
   workerId: number;
   progressReportInterval: number;
+  currentTemplate: BlockTemplate | null;
+  shouldRestart: boolean;
 }
 
 let workerState: WorkerState = {
   isRunning: false,
   workerId: 0,
   progressReportInterval: MINING_CONSTANTS.DEFAULT_PROGRESS_REPORT_INTERVAL,
+  currentTemplate: null,
+  shouldRestart: false,
 };
 
 function updateWorkerState(updates: Partial<WorkerState>): void {
@@ -53,6 +57,9 @@ function createFoundMessage(
   nonce: number,
   hash: string,
   attempts: number,
+  merkleRoot: string,
+  blockHeight: number,
+  serializedBlock?: string,
 ): WorkerFoundMessage {
   return {
     type: "found",
@@ -61,6 +68,9 @@ function createFoundMessage(
     hash,
     attempts,
     totalAttempts: attempts,
+    merkleRoot,
+    blockHeight,
+    serializedBlock,
   };
 }
 
@@ -102,13 +112,24 @@ async function mineRange(
   let attempts = 0;
   const startTime = Date.now();
   let lastProgressReport = 0;
+  let currentTemplate = blockTemplate;
 
   for (
     let nonce = nonceStart;
     nonce <= nonceEnd && workerState.isRunning;
     nonce++
   ) {
-    const miningResult = await mineAttempt(blockTemplate, nonce);
+    // Check if we need to restart with new template
+    if (workerState.shouldRestart && workerState.currentTemplate) {
+      console.log(
+        `Worker ${workerState.workerId}: Restarting with new template at nonce ${nonce}`,
+      );
+      currentTemplate = workerState.currentTemplate;
+      workerState.shouldRestart = false;
+      // Continue mining with new template from current nonce
+    }
+
+    const miningResult = await mineAttempt(currentTemplate, nonce);
 
     if (!miningResult.success) {
       const errorMessage = createErrorMessage(miningResult.error);
@@ -119,10 +140,18 @@ async function mineRange(
     attempts++;
 
     if (miningResult.data.valid) {
+      // Calculate merkle root for the valid block
+      const merkleResult = await calculateMerkleRootFromTemplate(
+        currentTemplate,
+      );
+      const merkleRoot = merkleResult.success ? merkleResult.data : "unknown";
+
       const foundMessage = createFoundMessage(
         nonce,
         miningResult.data.hash,
         attempts,
+        merkleRoot,
+        currentTemplate.height,
       );
       logBlockFound(nonce, miningResult.data.hash);
       self.postMessage(foundMessage);
@@ -171,6 +200,25 @@ function handleStopMessage(): void {
   self.close();
 }
 
+function handleTemplateUpdateMessage(message: WorkerMessage): void {
+  if (message.type !== "template_update") return;
+
+  console.log(
+    `Worker ${workerState.workerId}: Received template update for block ${message.blockTemplate.height}`,
+  );
+
+  updateWorkerState({
+    currentTemplate: message.blockTemplate,
+    shouldRestart: message.shouldRestart,
+  });
+
+  if (message.shouldRestart) {
+    console.log(
+      `Worker ${workerState.workerId}: Will restart mining with new template`,
+    );
+  }
+}
+
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const message = event.data;
 
@@ -179,6 +227,8 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       await handleStartMessage(message);
     } else if (message.type === "stop") {
       handleStopMessage();
+    } else if (message.type === "template_update") {
+      handleTemplateUpdateMessage(message);
     }
   } catch (error) {
     const errorMessage = createErrorMessage(error);

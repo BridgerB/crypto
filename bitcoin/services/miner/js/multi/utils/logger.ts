@@ -68,6 +68,7 @@ export function logRealBitcoinData(
 
 export function logBlockHeaderConstruction(
   blockTemplate: BlockTemplate,
+  merkleRoot: string,
   serializedHeaderHex: string,
   headerLength: number,
   headerHashHex: string,
@@ -78,7 +79,7 @@ export function logBlockHeaderConstruction(
   logger.info("Block Header Components:");
   logger.info(`  Version: ${blockTemplate.version}`);
   logger.info(`  Previous Hash: ${blockTemplate.previousblockhash}`);
-  logger.info(`  Merkle Root: dummy (dummy)`);
+  logger.info(`  Merkle Root: ${merkleRoot}`);
   logger.info(`  Time: ${blockTemplate.curtime}`);
   logger.info(`  Bits: ${blockTemplate.bits}`);
   logger.info(`  Nonce: 0`);
