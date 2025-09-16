@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["dom", "dom.iterable", "es6", "deno.ns"]
+  },
+  "tasks": {
+    "start": "deno run --allow-net main.ts"
+  }
+}
