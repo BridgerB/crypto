@@ -1,4 +1,4 @@
-import { BlockTemplate } from "./rpc.ts";
+import { BlockTemplate } from "./bitcoin.ts";
 
 export interface WorkerStartMessage {
   type: "start";
@@ -51,17 +51,3 @@ export type WorkerResponse =
   | WorkerFoundMessage
   | WorkerExhaustedMessage
   | WorkerErrorMessage;
-
-export interface MiningStats {
-  totalHashes: number;
-  totalHashRate: number;
-  workersActive: number;
-  startTime: number;
-  elapsedTime: number;
-}
-
-export interface WorkerConfig {
-  progressReportInterval: number; // Report progress every N hashes
-  workerCount: number;
-  maxNonceValue: number;
-}

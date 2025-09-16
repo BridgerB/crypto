@@ -1,134 +1,187 @@
-import { bytesToHex, doubleSha256 } from "./crypto.ts";
-import {
-  BlockHeader,
-  createDummyMerkleRoot,
-  serializeBlockHeader,
-} from "./block.ts";
-import {
+import { mineAttempt } from "./mining/core.ts";
+import { MINING_CONSTANTS } from "./utils/constants.ts";
+import type { BlockTemplate } from "./types/bitcoin.ts";
+import type {
   WorkerErrorMessage,
   WorkerExhaustedMessage,
   WorkerFoundMessage,
   WorkerMessage,
   WorkerProgressMessage,
-} from "./shared-types.ts";
+} from "./types/worker.ts";
 
-let isRunning = false;
-let workerId = 0;
-let progressReportInterval = 50000; // Report every 50K hashes by default
+interface WorkerState {
+  isRunning: boolean;
+  workerId: number;
+  progressReportInterval: number;
+}
 
-self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
-  const message = event.data;
-
-  try {
-    if (message.type === "start") {
-      workerId = message.workerId;
-      isRunning = true;
-
-      console.log(
-        `Worker ${workerId}: Starting mining from nonce ${message.nonceStart.toLocaleString()} to ${message.nonceEnd.toLocaleString()}`,
-      );
-
-      await mineRange(
-        message.blockTemplate,
-        message.nonceStart,
-        message.nonceEnd,
-      );
-    } else if (message.type === "stop") {
-      console.log(`Worker ${workerId}: Received stop signal`);
-      isRunning = false;
-      self.close();
-    }
-  } catch (error) {
-    const errorMessage: WorkerErrorMessage = {
-      type: "error",
-      workerId,
-      error: error instanceof Error ? error.message : String(error),
-    };
-    self.postMessage(errorMessage);
-  }
+let workerState: WorkerState = {
+  isRunning: false,
+  workerId: 0,
+  progressReportInterval: MINING_CONSTANTS.DEFAULT_PROGRESS_REPORT_INTERVAL,
 };
 
+function updateWorkerState(updates: Partial<WorkerState>): void {
+  workerState = { ...workerState, ...updates };
+}
+
+function createErrorMessage(error: unknown): WorkerErrorMessage {
+  return {
+    type: "error",
+    workerId: workerState.workerId,
+    error: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function createProgressMessage(
+  nonce: number,
+  hash: string,
+  attempts: number,
+  hashRate: number,
+): WorkerProgressMessage {
+  return {
+    type: "progress",
+    workerId: workerState.workerId,
+    currentNonce: nonce,
+    hash,
+    attempts,
+    hashRate,
+  };
+}
+
+function createFoundMessage(
+  nonce: number,
+  hash: string,
+  attempts: number,
+): WorkerFoundMessage {
+  return {
+    type: "found",
+    workerId: workerState.workerId,
+    nonce,
+    hash,
+    attempts,
+    totalAttempts: attempts,
+  };
+}
+
+function createExhaustedMessage(attempts: number): WorkerExhaustedMessage {
+  return {
+    type: "exhausted",
+    workerId: workerState.workerId,
+    attempts,
+  };
+}
+
+function logWorkerStart(nonceStart: number, nonceEnd: number): void {
+  console.log(
+    `Worker ${workerState.workerId}: Starting mining from nonce ${nonceStart.toLocaleString()} to ${nonceEnd.toLocaleString()}`,
+  );
+}
+
+function logWorkerStop(): void {
+  console.log(`Worker ${workerState.workerId}: Received stop signal`);
+}
+
+function logBlockFound(nonce: number, hash: string): void {
+  console.log(
+    `Worker ${workerState.workerId}: 🎉 FOUND WINNING BLOCK! Nonce: ${nonce.toLocaleString()}, Hash: ${hash}`,
+  );
+}
+
+function logRangeExhausted(nonceStart: number, nonceEnd: number): void {
+  console.log(
+    `Worker ${workerState.workerId}: Exhausted nonce range (${nonceStart.toLocaleString()} to ${nonceEnd.toLocaleString()})`,
+  );
+}
+
 async function mineRange(
-  blockTemplate: any,
+  blockTemplate: BlockTemplate,
   nonceStart: number,
   nonceEnd: number,
-) {
-  // Create base block header
-  const baseHeader: BlockHeader = {
-    version: blockTemplate.version,
-    previousBlockHash: blockTemplate.previousblockhash,
-    merkleRoot: createDummyMerkleRoot(),
-    time: blockTemplate.curtime,
-    bits: blockTemplate.bits,
-    nonce: 0,
-  };
-
+): Promise<void> {
   let attempts = 0;
   const startTime = Date.now();
   let lastProgressReport = 0;
 
-  // Mining loop for this worker's nonce range
-  for (let nonce = nonceStart; nonce <= nonceEnd && isRunning; nonce++) {
-    // Update nonce
-    baseHeader.nonce = nonce;
+  for (
+    let nonce = nonceStart;
+    nonce <= nonceEnd && workerState.isRunning;
+    nonce++
+  ) {
+    const miningResult = await mineAttempt(blockTemplate, nonce);
 
-    // Serialize and hash
-    const serializedHeader = serializeBlockHeader(baseHeader);
-    const headerHash = await doubleSha256(serializedHeader);
-    const headerHashHex = bytesToHex(headerHash);
+    if (!miningResult.success) {
+      const errorMessage = createErrorMessage(miningResult.error);
+      self.postMessage(errorMessage);
+      return;
+    }
 
     attempts++;
 
-    // Check if we found a winning block
-    if (headerHashHex < blockTemplate.target) {
-      // WINNING BLOCK FOUND!
-      const foundMessage: WorkerFoundMessage = {
-        type: "found",
-        workerId,
+    if (miningResult.data.valid) {
+      const foundMessage = createFoundMessage(
         nonce,
-        hash: headerHashHex,
+        miningResult.data.hash,
         attempts,
-        totalAttempts: attempts,
-      };
-
-      console.log(
-        `Worker ${workerId}: 🎉 FOUND WINNING BLOCK! Nonce: ${nonce.toLocaleString()}, Hash: ${headerHashHex}`,
       );
+      logBlockFound(nonce, miningResult.data.hash);
       self.postMessage(foundMessage);
-      return; // Stop this worker
+      return;
     }
 
-    // Report progress periodically
-    if (attempts - lastProgressReport >= progressReportInterval) {
+    if (attempts - lastProgressReport >= workerState.progressReportInterval) {
       const currentTime = Date.now();
       const elapsedSeconds = (currentTime - startTime) / 1000;
       const hashRate = Math.round(attempts / elapsedSeconds);
 
-      const progressMessage: WorkerProgressMessage = {
-        type: "progress",
-        workerId,
-        currentNonce: nonce,
-        hash: headerHashHex,
+      const progressMessage = createProgressMessage(
+        nonce,
+        miningResult.data.hash,
         attempts,
         hashRate,
-      };
+      );
 
       self.postMessage(progressMessage);
       lastProgressReport = attempts;
     }
   }
 
-  // If we reach here, we've exhausted our nonce range
-  if (isRunning) {
-    const exhaustedMessage: WorkerExhaustedMessage = {
-      type: "exhausted",
-      workerId,
-      attempts,
-    };
-
-    console.log(
-      `Worker ${workerId}: Exhausted nonce range (${nonceStart.toLocaleString()} to ${nonceEnd.toLocaleString()})`,
-    );
+  if (workerState.isRunning) {
+    const exhaustedMessage = createExhaustedMessage(attempts);
+    logRangeExhausted(nonceStart, nonceEnd);
     self.postMessage(exhaustedMessage);
   }
 }
+
+async function handleStartMessage(message: WorkerMessage): Promise<void> {
+  if (message.type !== "start") return;
+
+  updateWorkerState({
+    workerId: message.workerId,
+    isRunning: true,
+  });
+
+  logWorkerStart(message.nonceStart, message.nonceEnd);
+  await mineRange(message.blockTemplate, message.nonceStart, message.nonceEnd);
+}
+
+function handleStopMessage(): void {
+  logWorkerStop();
+  updateWorkerState({ isRunning: false });
+  self.close();
+}
+
+self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
+  const message = event.data;
+
+  try {
+    if (message.type === "start") {
+      await handleStartMessage(message);
+    } else if (message.type === "stop") {
+      handleStopMessage();
+    }
+  } catch (error) {
+    const errorMessage = createErrorMessage(error);
+    self.postMessage(errorMessage);
+  }
+};
