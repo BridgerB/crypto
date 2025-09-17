@@ -3,6 +3,18 @@
 A production-ready, multi-threaded Bitcoin mining implementation built with Deno
 that can produce valid blocks accepted by the Bitcoin network.
 
+## ⚠️ Block Submission Status
+
+**Current Implementation:**
+
+- ✅ **Real Bitcoin Mining**: Performs genuine proof-of-work with real merkle
+  trees, block headers, and target validation
+- ❌ **Missing Block Submission**: Does not submit found blocks to the Bitcoin
+  network
+
+When a valid block is found, the miner logs the result and exits but does not
+submit the block to Bitcoin Core via `submitblock` RPC.
+
 ## Overview
 
 This is a complete Bitcoin mining system that:
