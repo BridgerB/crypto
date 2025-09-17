@@ -1,7 +1,7 @@
 import { getValidatedConfig } from "./utils/config.ts";
 import { createLogger } from "./utils/logger.ts";
 import { getBlockTemplate } from "./rpc/client.ts";
-import { runBenchmark, logBenchmarkResults } from "./mining/single-threaded.ts";
+import { logBenchmarkResults, runBenchmark } from "./mining/single-threaded.ts";
 
 function createSystemDependencies() {
   return {
@@ -45,7 +45,7 @@ async function benchmark(): Promise<void> {
         logger.info(
           `Progress: ${current.toLocaleString()} hashes (${hashRate.toLocaleString()} h/s)`,
         );
-      }
+      },
     );
 
     if (!benchmarkResult.success) {
@@ -54,9 +54,11 @@ async function benchmark(): Promise<void> {
 
     const { hashRate, duration } = benchmarkResult.data;
     logBenchmarkResults(targetHashes, hashRate, duration, logger);
-
   } catch (error) {
-    logger.error("Benchmark failed: " + (error instanceof Error ? error.message : String(error)));
+    logger.error(
+      "Benchmark failed: " +
+        (error instanceof Error ? error.message : String(error)),
+    );
     logger.info("\nMake sure Bitcoin Core is running with RPC enabled.");
     Deno.exit(1);
   }

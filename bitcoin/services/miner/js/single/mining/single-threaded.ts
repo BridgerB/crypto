@@ -27,7 +27,7 @@ export async function mineInfinite(
   blockTemplate: BlockTemplate,
   config: SingleThreadedMiningConfig,
   dependencies: MiningDependencies,
-  onProgress?: MiningProgressCallback
+  onProgress?: MiningProgressCallback,
 ): Promise<Result<{ nonce: number; hash: string; attempts: number }>> {
   let nonce = 0;
   let attempts = 0;
@@ -42,13 +42,18 @@ export async function mineInfinite(
     const miningResult = await mineAttempt(blockTemplate, nonce);
 
     if (!miningResult.success) {
-      return { success: false, error: `Mining attempt failed: ${miningResult.error}` };
+      return {
+        success: false,
+        error: `Mining attempt failed: ${miningResult.error}`,
+      };
     }
 
     attempts++;
 
     if (config.logEveryHash) {
-      dependencies.logger.info(`Nonce ${nonce.toLocaleString()}: ${miningResult.data.hash}`);
+      dependencies.logger.info(
+        `Nonce ${nonce.toLocaleString()}: ${miningResult.data.hash}`,
+      );
     }
 
     if (miningResult.data.valid) {
@@ -58,12 +63,16 @@ export async function mineInfinite(
         miningResult.data.hash,
         attempts,
         attempts,
-        dependencies.logger
+        dependencies.logger,
       );
 
       dependencies.logger.info(`🎯 Target: ${blockTemplate.target}`);
-      dependencies.logger.info(`📊 Total Attempts: ${attempts.toLocaleString()}`);
-      dependencies.logger.info(`\n🚀 ${LOGGING_CONSTANTS.MESSAGES.STOPPING_MINER} 🚀`);
+      dependencies.logger.info(
+        `📊 Total Attempts: ${attempts.toLocaleString()}`,
+      );
+      dependencies.logger.info(
+        `\n🚀 ${LOGGING_CONSTANTS.MESSAGES.STOPPING_MINER} 🚀`,
+      );
 
       dependencies.exit(0);
       return {
@@ -71,12 +80,15 @@ export async function mineInfinite(
         data: {
           nonce,
           hash: miningResult.data.hash,
-          attempts
-        }
+          attempts,
+        },
       };
     }
 
-    if (onProgress && attempts - lastProgressReport >= config.progressReportInterval) {
+    if (
+      onProgress &&
+      attempts - lastProgressReport >= config.progressReportInterval
+    ) {
       const currentTime = Date.now();
       const elapsedSeconds = (currentTime - startTime) / 1000;
       const hashRate = Math.round(attempts / elapsedSeconds);
@@ -85,7 +97,7 @@ export async function mineInfinite(
         nonce,
         hash: miningResult.data.hash,
         attempts,
-        hashRate
+        hashRate,
       });
 
       lastProgressReport = attempts;
@@ -99,9 +111,11 @@ export async function runBenchmark(
   blockTemplate: BlockTemplate,
   targetHashes: number,
   dependencies: MiningDependencies,
-  onProgress?: (current: number, total: number, hashRate: number) => void
+  onProgress?: (current: number, total: number, hashRate: number) => void,
 ): Promise<Result<{ hashRate: number; duration: number }>> {
-  dependencies.logger.info(`🚀 Bitcoin Miner Benchmark - Running ${targetHashes.toLocaleString()} hashes\n`);
+  dependencies.logger.info(
+    `🚀 Bitcoin Miner Benchmark - Running ${targetHashes.toLocaleString()} hashes\n`,
+  );
 
   const startTime = Date.now();
 
@@ -109,7 +123,10 @@ export async function runBenchmark(
     const miningResult = await mineAttempt(blockTemplate, nonce);
 
     if (!miningResult.success) {
-      return { success: false, error: `Benchmark failed: ${miningResult.error}` };
+      return {
+        success: false,
+        error: `Benchmark failed: ${miningResult.error}`,
+      };
     }
 
     if (onProgress && (nonce + 1) % 100_000 === 0) {
@@ -127,8 +144,8 @@ export async function runBenchmark(
     success: true,
     data: {
       hashRate,
-      duration: totalDuration
-    }
+      duration: totalDuration,
+    },
   };
 }
 
@@ -136,7 +153,7 @@ export function logBenchmarkResults(
   targetHashes: number,
   hashRate: number,
   duration: number,
-  logger: Logger
+  logger: Logger,
 ): void {
   logger.info("\n🎯 BENCHMARK RESULTS:");
   logger.info(`Total Hashes: ${targetHashes.toLocaleString()}`);
@@ -148,7 +165,13 @@ export function logBenchmarkResults(
   const yearsToBlock = expectedTimeToBlock / (365.25 * 24 * 3600);
 
   logger.info("\n📊 MINING PROJECTIONS:");
-  logger.info(`Expected time to find block: ${expectedTimeToBlock.toLocaleString()} seconds`);
+  logger.info(
+    `Expected time to find block: ${expectedTimeToBlock.toLocaleString()} seconds`,
+  );
   logger.info(`That's approximately: ${yearsToBlock.toExponential(2)} years`);
-  logger.info(`Bitcoin price would need to be: $${(yearsToBlock * 1000000).toExponential(2)} for profitability`);
+  logger.info(
+    `Bitcoin price would need to be: $${
+      (yearsToBlock * 1000000).toExponential(2)
+    } for profitability`,
+  );
 }

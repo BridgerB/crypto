@@ -86,7 +86,7 @@ async function main(): Promise<void> {
     const miningResult = await mineInfinite(
       blockTemplate,
       miningConfig,
-      dependencies
+      dependencies,
     );
 
     if (!miningResult.success) {
