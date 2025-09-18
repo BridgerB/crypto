@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["dom", "dom.iterable", "es6", "deno.ns"]
+  },
+  "tasks": {
+    "start": "MINING_MODE=live BITCOIN_NETWORK=mainnet deno run --allow-net --allow-read --allow-env --allow-run main.ts",
+    "start-genesis": "MINING_MODE=genesis BITCOIN_NETWORK=mainnet deno run --allow-net --allow-read --allow-env --allow-run main.ts",
+    "start-live": "MINING_MODE=live BITCOIN_NETWORK=mainnet deno run --allow-net --allow-read --allow-env --allow-run main.ts",
+    "start-testnet": "MINING_MODE=live BITCOIN_NETWORK=testnet deno run --allow-net --allow-read --allow-env --allow-run main.ts",
+    "benchmark-multi": "deno run --allow-net --allow-read --allow-env --allow-run benchmark-multi.ts"
+  }
+}

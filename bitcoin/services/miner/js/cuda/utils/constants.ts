@@ -1,0 +1,55 @@
+export const BITCOIN_CONSTANTS = {
+  BLOCK_HEADER_SIZE: 80,
+  HASH_LENGTH: 32,
+  MAX_NONCE_VALUE: 0xFFFFFFFF,
+  MERKLE_ROOT_LENGTH: 64,
+  HASH_HEX_LENGTH: 64,
+} as const;
+
+export const MINING_CONSTANTS = {
+  DEFAULT_WORKER_COUNT: 12,
+  DEFAULT_PROGRESS_REPORT_INTERVAL: 50000,
+  PROGRESS_REPORTING_INTERVAL_MS: 10000,
+  TIMEOUT_MS: 120000,
+} as const;
+
+export const RPC_CONSTANTS = {
+  DEFAULT_HOST: "127.0.0.1",
+  DEFAULT_PORT: 8332,
+  DEFAULT_USERNAME: "bridger",
+  DEFAULT_PASSWORD: "password",
+  JSON_RPC_VERSION: "1.0",
+} as const;
+
+export const LOGGING_CONSTANTS = {
+  EMOJIS: {
+    ROCKET: "🚀",
+    TARGET: "🎯",
+    GOLD: "💰",
+    HASH: "🔢",
+    TROPHY: "🏆",
+    CHART: "📊",
+    STOP: "🛑",
+    WARNING: "⚠️",
+    ERROR: "❌",
+    SUCCESS: "✅",
+    LIGHTNING: "⚡",
+    PARTY: "🎉",
+    LIGHT_BULB: "💡",
+    PACKAGE: "📦",
+    CLIPBOARD: "📋",
+    GEAR: "⚙️",
+    MAGNIFYING_GLASS: "🔍",
+  },
+  MESSAGES: {
+    WINNING_BLOCK_FOUND: "WINNING BITCOIN BLOCK FOUND!",
+    BLOCK_REWARD: "BLOCK REWARD: 3.125 BTC (~$359,375 USD)",
+    STOPPING_MINER: "STOPPING MINER - BLOCK FOUND!",
+    STOPPING_WORKERS: "STOPPING ALL WORKERS - BLOCK FOUND!",
+  },
+} as const;
+
+export const DUMMY_VALUES = {
+  MERKLE_ROOT:
+    "0000000000000000000000000000000000000000000000000000000000000000",
+} as const;
